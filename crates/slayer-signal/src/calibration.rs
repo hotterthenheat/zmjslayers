@@ -88,11 +88,7 @@ pub struct CalibrationReport {
 /// Clamp to the unit interval. A non-finite input clamps to `0.0`: an
 /// unmeasurable probability is not in force.
 fn clamp01(v: f64) -> f64 {
-    if v.is_nan() {
-        0.0
-    } else {
-        v.clamp(0.0, 1.0)
-    }
+    if v.is_nan() { 0.0 } else { v.clamp(0.0, 1.0) }
 }
 
 /// Wilson score interval for an observed proportion `p` from `n` trials at the
@@ -339,9 +335,9 @@ mod tests {
         let rates = [0.02, 0.30, 0.10, 0.40, 0.35, 0.55, 0.50, 0.70, 0.85, 0.92];
         let per_bin = 50u32;
         let mut h = Vec::new();
-        for k in 0..CALIBRATION_BINS {
+        for (k, &rate) in rates.iter().enumerate() {
             let center = (k as f64 + 0.5) / CALIBRATION_BINS as f64;
-            let wins = (rates[k] * f64::from(per_bin)).round() as u32;
+            let wins = (rate * f64::from(per_bin)).round() as u32;
             for j in 0..per_bin {
                 h.push((center, if j < wins { 1.0 } else { 0.0 }));
             }
@@ -357,7 +353,13 @@ mod tests {
 
     #[test]
     fn wilson_brackets_the_observed_proportion() {
-        for &(p, n) in &[(0.6_f64, 50u64), (0.2, 10), (0.9, 200), (0.5, 5), (0.05, 40)] {
+        for &(p, n) in &[
+            (0.6_f64, 50u64),
+            (0.2, 10),
+            (0.9, 200),
+            (0.5, 5),
+            (0.05, 40),
+        ] {
             let w = wilson_interval(p, n);
             assert!(
                 w.lo <= p + 1e-12 && p <= w.hi + 1e-12,
@@ -473,8 +475,7 @@ mod tests {
     #[test]
     fn structs_serde_round_trip() {
         let w = wilson_interval(0.6, 100);
-        let wb: WilsonInterval =
-            serde_json::from_str(&serde_json::to_string(&w).unwrap()).unwrap();
+        let wb: WilsonInterval = serde_json::from_str(&serde_json::to_string(&w).unwrap()).unwrap();
         assert!((w.lo - wb.lo).abs() < 1e-12 && (w.hi - wb.hi).abs() < 1e-12);
 
         let r = calibration_report(0.5, &perfect_history());

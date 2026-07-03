@@ -244,8 +244,16 @@ fn map_read(thesis: &ThesisReadout, dealer: &DealerPanel, _vol: &VolPanel) -> Te
     } else {
         "NEUTRAL"
     };
-    let regime = if dealer.net_gex >= 0.0 { "PIN" } else { "TREND" };
-    let outlook = if dealer.net_gex >= 0.0 { "RANGE" } else { "TREND" };
+    let regime = if dealer.net_gex >= 0.0 {
+        "PIN"
+    } else {
+        "TREND"
+    };
+    let outlook = if dealer.net_gex >= 0.0 {
+        "RANGE"
+    } else {
+        "TREND"
+    };
     TerminalReadPanel {
         score,
         bias: bias.to_owned(),
@@ -263,7 +271,10 @@ fn map_read(thesis: &ThesisReadout, dealer: &DealerPanel, _vol: &VolPanel) -> Te
 /// construction — never a fabricated ACTIVE.
 fn abstaining_decision() -> DecisionPanel {
     DecisionPanel {
-        opportunity: Readout { state: BinaryState::Inactive, score: 0.0 },
+        opportunity: Readout {
+            state: BinaryState::Inactive,
+            score: 0.0,
+        },
         action: "WAIT".to_owned(),
         expected_value: 0.0,
         calibrated_p: 0.0,
