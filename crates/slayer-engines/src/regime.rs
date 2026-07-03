@@ -29,7 +29,7 @@
 //!   [`Readout`].
 
 use serde::{Deserialize, Serialize};
-use slayer_core::{Candle, HysteresisBand, Readout};
+use slayer_core::{BinaryState, Candle, HysteresisBand, Readout};
 use slayer_quant::realized_vol::close_to_close;
 use std::f64::consts::{FRAC_PI_2, LN_2};
 
@@ -238,6 +238,43 @@ pub fn analyze_regime(candles: &[Candle]) -> RegimeState {
         expansion,
         term_structure_slope,
     }
+}
+
+/// Prior binary states for the regime readouts, carried between snapshots so
+/// their hysteresis bands hold through boundary noise.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct RegimePrevStates {
+    /// Prior trend-persistence state.
+    pub persistence: BinaryState,
+    /// Prior volatility-compression state.
+    pub compression: BinaryState,
+    /// Prior volatility-expansion state.
+    pub expansion: BinaryState,
+    /// Prior regime-confidence state.
+    pub confident: BinaryState,
+}
+
+/// [`analyze_regime`] with the readout hysteresis threaded from the previous
+/// snapshot's states, so `compression` / `expansion` / `persistence` /
+/// `confident` hold through a boundary graze instead of cold-starting each
+/// tick. The continuous scores are identical to the cold-start form; only the
+/// resolved [`BinaryState`] can differ inside a band.
+#[must_use]
+pub fn analyze_regime_from(candles: &[Candle], prev: RegimePrevStates) -> RegimeState {
+    let mut s = analyze_regime(candles);
+    s.persistence = Readout::resolve_from(
+        &HURST_PERSISTENCE_BAND,
+        s.persistence.score,
+        prev.persistence,
+    );
+    s.compression = Readout::resolve_from(&COMPRESSION_BAND, s.compression.score, prev.compression);
+    s.expansion = Readout::resolve_from(&EXPANSION_BAND, s.expansion.score, prev.expansion);
+    s.classification.confident = Readout::resolve_from(
+        &REGIME_CONFIDENT_BAND,
+        s.classification.confident.score,
+        prev.confident,
+    );
+    s
 }
 
 /// Anis–Lloyd/Peters-corrected Hurst exponent of a price `series` via

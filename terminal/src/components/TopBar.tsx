@@ -9,24 +9,37 @@ import { useTerminal, useActiveSnapshot } from '@/store'
 import { price, pct, money } from '@/format'
 import './topbar.css'
 
-function useTickDirection(value: number | undefined): 'up' | 'down' | null {
-  const prev = useRef<number | undefined>(undefined)
+/**
+ * Tick direction for a value scoped to `key` (the symbol). Switching symbols
+ * resets the baseline rather than flashing a fabricated tick — a price that
+ * belongs to a different instrument is not a move.
+ */
+function useTickDirection(key: string | undefined, value: number | undefined): 'up' | 'down' | null {
+  const prev = useRef<{ key: string | undefined; value: number | undefined }>({
+    key: undefined,
+    value: undefined,
+  })
   const [dir, setDir] = useState<'up' | 'down' | null>(null)
   useEffect(() => {
     if (value === undefined) return
     const p = prev.current
-    if (p !== undefined && value !== p) setDir(value > p ? 'up' : 'down')
-    prev.current = value
+    // Only a same-symbol change is a real tick.
+    if (p.key === key && p.value !== undefined && value !== p.value) {
+      setDir(value > p.value ? 'up' : 'down')
+    } else {
+      setDir(null)
+    }
+    prev.current = { key, value }
     const t = setTimeout(() => setDir(null), 380)
     return () => clearTimeout(t)
-  }, [value])
+  }, [key, value])
   return dir
 }
 
 export function TopBar() {
   const { symbols, activeSymbol, setActiveSymbol, setPaletteOpen } = useTerminal()
   const snap = useActiveSnapshot()
-  const tick = useTickDirection(snap?.spot)
+  const tick = useTickDirection(snap?.symbol, snap?.spot)
 
   return (
     <header className="topbar">

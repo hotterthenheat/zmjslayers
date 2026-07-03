@@ -19,7 +19,7 @@ use slayer_core::wire::{
 use slayer_core::{BinaryState, ExpiryDate, OptionChain, OptionRight, Readout, Symbol, TsMillis};
 use slayer_engines::dealer::{self, DealerDynamicsInput, DealerPrevStates};
 use slayer_engines::gex::{self, GexParams, GexStructure, Wall};
-use slayer_engines::regime::{self, RegimeLabel};
+use slayer_engines::regime::{self, RegimeLabel, RegimePrevStates};
 use slayer_engines::thesis::{self, ThesisReadout};
 use slayer_engines::zones::{self, GravityConfig, GravityStrikeInput, WallInput, ZoneInput};
 use slayer_quant::realized_vol;
@@ -42,20 +42,39 @@ const ATR_FALLBACK_PCT: f64 = 0.01;
 /// Minimum candles before the candle engines are meaningful.
 const MIN_CANDLES: usize = 30;
 
+/// Chain-derived panels, cached so an unchanged chain (the feed emits candles
+/// far more often than chain snapshots) is not re-run through the dealer
+/// time-derivative engines — which would see `prev == current` and collapse
+/// the velocities, and would key `dt_min` off the wrong interval.
+#[derive(Debug, Clone)]
+struct ChainCache {
+    dealer: DealerPanel,
+    flow: FlowPanel,
+    vol_extra: VolExtra,
+    expiry: Option<ExpiryDate>,
+}
+
 /// Per-symbol engine memory: the history the pure engines take as parameters.
 #[derive(Debug, Clone, Default)]
 pub struct EngineMemory {
     prev_thesis_state: BinaryState,
-    prev_regime_state: BinaryState,
+    prev_regime_states: RegimePrevStates,
     dealer_prev_states: DealerPrevStates,
+    prev_call_wall_state: BinaryState,
+    prev_put_wall_state: BinaryState,
     prev_net_gex: Option<f64>,
     prev2_net_gex: Option<f64>,
     prev_net_vanna: Option<f64>,
     prev_gex_com: Option<f64>,
     prev_total_oi: Option<f64>,
-    prev_ts: Option<TsMillis>,
+    /// Timestamp of the last *chain snapshot* whose dynamics we advanced —
+    /// the divisor base for OI/gamma velocity, distinct from the recompute
+    /// clock (which ticks on every candle).
+    last_chain_ts: Option<TsMillis>,
     iv_history: Vec<f64>,
     charm_history: Vec<f64>,
+    /// Last chain-derived output, reused while the chain is unchanged.
+    chain_cache: Option<ChainCache>,
 }
 
 impl EngineMemory {
@@ -115,17 +134,45 @@ impl PipelineState {
         // ── Candle engines ────────────────────────────────────────────────
         let atr_fallback = spot * ATR_FALLBACK_PCT;
         let thesis = thesis::thesis_from(candles, atr_fallback, mem.prev_thesis_state);
-        let regime = regime::analyze_regime(candles);
+        let regime = regime::analyze_regime_from(candles, mem.prev_regime_states);
         let realized = realized_vol::yang_zhang(candles, MINUTE_BARS_PER_YEAR)
             .or_else(|_| realized_vol::close_to_close(candles, MINUTE_BARS_PER_YEAR))
             .unwrap_or(0.0);
 
-        // ── Chain engines (when a chain is present) ───────────────────────
+        // ── Chain engines (only when the chain snapshot actually changes) ──
+        // The runtime recomputes on every candle, but the dealer structure and
+        // time-derivative engines are a function of the chain snapshot; running
+        // them against an unchanged chain would corrupt the velocity divisor
+        // and collapse the flow readouts. Recompute on a new chain, else reuse.
         let (dealer_panel, flow_panel, vol_extra, expiry) = match chain {
             Some(c) if !c.quotes.is_empty() => {
-                let expiry = nearest_expiry(c);
-                let t_years = expiry.map_or(1.0 / 365.0, |e| years_to_expiry(c.ts, e));
-                compose_chain(mem, c, spot, t_years)
+                let is_new = mem.last_chain_ts != Some(c.ts);
+                if is_new {
+                    let expiry = nearest_expiry(c);
+                    let t_years = expiry.map_or(1.0 / 365.0, |e| years_to_expiry(c.ts, e));
+                    let out = compose_chain(mem, c, spot, t_years);
+                    mem.chain_cache = Some(ChainCache {
+                        dealer: out.0.clone(),
+                        flow: out.1.clone(),
+                        vol_extra: out.2.clone(),
+                        expiry: out.3,
+                    });
+                    out
+                } else if let Some(cache) = &mem.chain_cache {
+                    (
+                        cache.dealer.clone(),
+                        cache.flow.clone(),
+                        cache.vol_extra.clone(),
+                        cache.expiry,
+                    )
+                } else {
+                    (
+                        empty_dealer_panel(),
+                        empty_flow_panel(),
+                        VolExtra::default(),
+                        None,
+                    )
+                }
             }
             _ => (
                 empty_dealer_panel(),
@@ -148,10 +195,14 @@ impl PipelineState {
         // ── Engine board ──────────────────────────────────────────────────
         let engines = engine_board(&thesis, &regime, &dealer_panel, &flow_panel);
 
-        // ── Advance memory ────────────────────────────────────────────────
+        // ── Advance candle-engine memory ──────────────────────────────────
         mem.prev_thesis_state = thesis.engagement.state;
-        mem.prev_regime_state = regime.classification.confident.state;
-        mem.prev_ts = Some(ts);
+        mem.prev_regime_states = RegimePrevStates {
+            persistence: regime.persistence.state,
+            compression: regime.compression.state,
+            expansion: regime.expansion.state,
+            confident: regime.classification.confident.state,
+        };
 
         Some(TerminalSnapshot {
             wire_version: WIRE_VERSION,
@@ -171,7 +222,7 @@ impl PipelineState {
 }
 
 /// Volatility fields sourced from the chain (absent without one).
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 struct VolExtra {
     implied_vol: f64,
     iv_rank: f64,
@@ -229,15 +280,21 @@ fn compose_chain(
         spot,
         strikes: &gravity_inputs,
         config: GravityConfig::default(),
-        call_wall: wall_input(gexs.call_wall.as_ref(), BinaryState::Inactive),
-        put_wall: wall_input(gexs.put_wall.as_ref(), BinaryState::Inactive),
+        // Thread the prior wall states so WALL_ZONE_BAND hysteresis actually
+        // holds through a graze around the strike (else every snapshot
+        // cold-starts and the wall flaps).
+        call_wall: wall_input(gexs.call_wall.as_ref(), mem.prev_call_wall_state),
+        put_wall: wall_input(gexs.put_wall.as_ref(), mem.prev_put_wall_state),
     };
     let zones = zones::zone_structure(&zone_input);
 
-    // Dealer-flow dynamics from aggregate exposures + prior tick.
+    // Dealer-flow dynamics from aggregate exposures + the prior *chain*.
     let gex_com = gamma_center_of_mass(&gexs);
     let total_oi: f64 = oi_by_strike.values().map(|a| a.call_oi + a.put_oi).sum();
-    let dt_min = mem.prev_ts.map_or(1.0, |p| {
+    // Velocity divisor is the interval to the previous chain snapshot, not the
+    // recompute clock. First chain (no prior) → priors are None, so the value
+    // is irrelevant; the engines emit zero velocity.
+    let dt_min = mem.last_chain_ts.map_or(1.0, |p| {
         (chain.ts.saturating_since(p) as f64 / 60_000.0).max(1e-3)
     });
     let dyn_input = DealerDynamicsInput {
@@ -258,10 +315,11 @@ fn compose_chain(
     };
     let flow = dealer::dealer_dynamics(&dyn_input);
 
-    // IV metrics: push the ATM IV and rank against history.
+    // IV metrics: rank against PRIOR history, then record this observation —
+    // the current IV must not sit in its own percentile denominator.
     let atm_iv = atm_iv(chain, spot);
-    mem.push_iv(atm_iv);
     let iv_metrics = vol_metrics::iv_metrics(atm_iv, &mem.iv_history);
+    mem.push_iv(atm_iv);
     let rnd_percentiles = rnd::implied_rnd(&chain.quotes, spot, t_years, RATE)
         .map(|c| {
             let p = c.percentiles;
@@ -290,13 +348,16 @@ fn compose_chain(
         rnd_percentiles,
     };
 
-    // Advance dealer memory.
+    // Advance chain memory (only reached on a new chain snapshot).
     mem.push_charm(gexs.net_charm.abs());
     mem.prev2_net_gex = mem.prev_net_gex;
     mem.prev_net_gex = Some(gexs.net_gex);
     mem.prev_net_vanna = Some(gexs.net_vex);
     mem.prev_gex_com = Some(gex_com);
     mem.prev_total_oi = Some(total_oi);
+    mem.last_chain_ts = Some(chain.ts);
+    mem.prev_call_wall_state = dealer_panel.call_wall.state.state;
+    mem.prev_put_wall_state = dealer_panel.put_wall.state.state;
     mem.dealer_prev_states = DealerPrevStates {
         vanna: flow.vanna.engaged.state,
         charm: flow.charm.engaged.state,

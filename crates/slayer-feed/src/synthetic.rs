@@ -57,12 +57,19 @@ const ATM_TURNOVER: f64 = 0.6;
 const HALF_SPREAD_FRAC: f64 = 0.015;
 /// Minimum quoted bid, points.
 const MIN_BID: f64 = 0.05;
-/// Vol-of-vol for the slowly varying base volatility regime.
-const VOL_OF_VOL: f64 = 0.015;
-/// Base-vol mean-reversion rate per tick.
-const VOL_MEAN_REVERT: f64 = 0.02;
-/// Bounds for the wandering base volatility.
-const VOL_BOUNDS: (f64, f64) = (0.08, 0.65);
+/// Minimum bid/ask separation so a floored quote never crosses, points.
+const MIN_TICK: f64 = 0.01;
+/// Milliseconds per calendar day, for stamping the chain expiry.
+const MS_PER_DAY: u64 = 86_400_000;
+/// Vol-of-vol for the wandering base-volatility regime. Sized so the base vol
+/// meaningfully drifts (stationary σ ≈ a few vol points) over a session —
+/// otherwise the compression/expansion reads and the [`VOL_BOUNDS`] clamp stay
+/// inert.
+const VOL_OF_VOL: f64 = 0.9;
+/// Base-vol mean-reversion rate, anchoring the drift to the symbol's base vol.
+const VOL_MEAN_REVERT: f64 = 0.06;
+/// Bounds for the wandering base volatility (a safety clamp on the SDE tails).
+const VOL_BOUNDS: (f64, f64) = (0.06, 0.9);
 
 /// Per-symbol synthetic parameters.
 #[derive(Debug, Clone)]
@@ -255,6 +262,13 @@ impl SymState {
     /// Synthesize a smile-consistent chain around current spot.
     fn chain(&mut self, ts: TsMillis) -> OptionChain {
         let t_years = CHAIN_DTE_DAYS / 365.0;
+        // Stamp an expiry consistent with the priced tenor: `CHAIN_DTE_DAYS`
+        // civil days after the snapshot date. A fixed far-dated expiry would
+        // make the gateway recover a ~1-year tenor from the date while the
+        // greeks were priced at 5 DTE — an 8× expected-move error.
+        #[allow(clippy::cast_possible_wrap)]
+        let snapshot_day = (ts.0 / MS_PER_DAY) as i64;
+        let expiry = civil_from_days(snapshot_day + CHAIN_DTE_DAYS as i64);
         let step = self.params.strike_step;
         let center = (self.spot / step).round() * step;
         let mut quotes = Vec::with_capacity((STRIKES_PER_SIDE as usize * 2 + 1) * 2);
@@ -305,16 +319,17 @@ impl SymState {
                 let turnover = ATM_TURNOVER * (-0.5 * m * m).exp();
                 let volume = (oi * turnover).round();
                 let half_spread = (theo * HALF_SPREAD_FRAC).max(MIN_BID / 2.0);
+                // Keep the two-sided market uncrossed: once the bid is floored
+                // at MIN_BID, the ask must clear it by at least one tick (a
+                // deep-OTM theoretical below the floor would otherwise invert).
+                let bid = (theo - half_spread).max(MIN_BID);
+                let ask = (theo + half_spread).max(bid + MIN_TICK);
                 quotes.push(OptionQuote {
                     strike,
                     right,
-                    expiry: ExpiryDate {
-                        year: 2026,
-                        month: 12,
-                        day: 18,
-                    },
-                    bid: Some((theo - half_spread).max(MIN_BID)),
-                    ask: Some(theo + half_spread),
+                    expiry,
+                    bid: Some(bid),
+                    ask: Some(ask),
                     volume: volume as u64,
                     open_interest: oi as u64,
                     iv: Some(iv),
@@ -334,6 +349,27 @@ impl SymState {
             multiplier: 100.0,
             quotes,
         }
+    }
+}
+
+/// Civil (Gregorian) date from days since the Unix epoch (Howard Hinnant's
+/// algorithm). Used to stamp a chain expiry consistent with its priced tenor.
+fn civil_from_days(z: i64) -> ExpiryDate {
+    let z = z + 719_468;
+    let era = if z >= 0 { z } else { z - 146_096 } / 146_097;
+    let doe = z - era * 146_097;
+    let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
+    let y = yoe + era * 400;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = doy - (153 * mp + 2) / 5 + 1;
+    let m = if mp < 10 { mp + 3 } else { mp - 9 };
+    let year = if m <= 2 { y + 1 } else { y };
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    ExpiryDate {
+        year: year as u16,
+        month: m as u8,
+        day: d as u8,
     }
 }
 
