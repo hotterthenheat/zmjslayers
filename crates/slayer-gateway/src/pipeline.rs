@@ -18,6 +18,7 @@ use slayer_core::wire::{
 };
 use slayer_core::{BinaryState, ExpiryDate, OptionChain, OptionRight, Readout, Symbol, TsMillis};
 use slayer_engines::dealer::{self, DealerDynamicsInput, DealerPrevStates};
+use slayer_engines::dealer_read::{self, ProfileInputs, StrikeGex};
 use slayer_engines::gex::{self, GexParams, GexStructure, Wall};
 use slayer_engines::regime::{self, RegimeLabel, RegimePrevStates};
 use slayer_engines::thesis::{self, ThesisReadout};
@@ -41,6 +42,8 @@ const CHARM_HISTORY_CAP: usize = 20;
 const ATR_FALLBACK_PCT: f64 = 0.01;
 /// Minimum candles before the candle engines are meaningful.
 const MIN_CANDLES: usize = 30;
+/// Recent closes fed to the dealer-read momentum window.
+const READ_CLOSE_WINDOW: usize = 20;
 
 /// Chain-derived panels, cached so an unchanged chain (the feed emits candles
 /// far more often than chain snapshots) is not re-run through the dealer
@@ -75,6 +78,10 @@ pub struct EngineMemory {
     charm_history: Vec<f64>,
     /// Last chain-derived output, reused while the chain is unchanged.
     chain_cache: Option<ChainCache>,
+    /// Dealer-structure profile for the read composites, refreshed per chain.
+    chain_profile: Option<ProfileInputs>,
+    /// Prior read-engagement state for hysteresis.
+    prev_read_engaged: BinaryState,
 }
 
 impl EngineMemory {
@@ -204,11 +211,36 @@ impl PipelineState {
             confident: regime.classification.confident.state,
         };
 
-        // Decision + directional read. Composed from live structure; the full
-        // signal-gate wiring (calibration/tail-risk/trust) lands with the
-        // slayer-signal integration — until then the decision honestly
-        // abstains (INACTIVE) rather than asserting an ungated opportunity.
-        let read = map_read(&thesis, &dealer_panel, &vol);
+        // Directional read: the dealer-read composites (spec 03 E6–E8) over
+        // the cached chain profile + live candle closes. Without a chain
+        // there is no structure to read — the panel abstains rather than
+        // inventing one. The decision gate abstains until a real trade
+        // journal exists to calibrate against (never fabricated, D11).
+        let read = match &mem.chain_profile {
+            Some(profile) => {
+                let closes: Vec<f64> = candles
+                    .iter()
+                    .rev()
+                    .take(READ_CLOSE_WINDOW)
+                    .rev()
+                    .map(|c| c.close)
+                    .collect();
+                let tr =
+                    dealer_read::compute_terminal_read(profile, &closes, mem.prev_read_engaged);
+                let outlook = dealer_read::compute_gex_outlook(profile, &closes);
+                let zdte = dealer_read::compute_zero_dte(
+                    spot,
+                    vol_extra.implied_vol,
+                    crate::timecalc::hours_to_session_close(ts),
+                    profile.net_gex,
+                    profile.magnet.unwrap_or(spot),
+                    &profile.strikes,
+                );
+                mem.prev_read_engaged = tr.engaged.state;
+                map_read(&tr, &outlook, &zdte)
+            }
+            None => empty_read_panel(),
+        };
         let decision = abstaining_decision();
 
         Some(TerminalSnapshot {
@@ -230,38 +262,60 @@ impl PipelineState {
     }
 }
 
-/// Directional read from live structure: bias from the thesis, regime from the
-/// dealer gamma sign, confidence from the dominant thesis side. Uses only real
-/// quantities; the richer dealer-read composites land with wave-2 integration.
-fn map_read(thesis: &ThesisReadout, dealer: &DealerPanel, _vol: &VolPanel) -> TerminalReadPanel {
-    let long = f64::from(thesis.long_score);
-    let short = f64::from(thesis.short_score);
-    let score = (long - short).clamp(-100.0, 100.0);
-    let bias = if thesis.direction > 0 {
-        "LONG"
-    } else if thesis.direction < 0 {
-        "SHORT"
-    } else {
-        "NEUTRAL"
+/// Map the dealer-read composites into the wire panel.
+fn map_read(
+    tr: &dealer_read::TerminalRead,
+    outlook: &dealer_read::GexOutlook,
+    zdte: &dealer_read::ZeroDte,
+) -> TerminalReadPanel {
+    let bias = match tr.bias {
+        dealer_read::Bias::Long => "LONG",
+        dealer_read::Bias::Short => "SHORT",
+        dealer_read::Bias::Neutral => "NEUTRAL",
     };
-    let regime = if dealer.net_gex >= 0.0 {
-        "PIN"
-    } else {
-        "TREND"
+    let regime = match tr.regime {
+        dealer_read::DealerRegime::Pin => "PIN",
+        dealer_read::DealerRegime::Trend => "TREND",
     };
-    let outlook = if dealer.net_gex >= 0.0 {
-        "RANGE"
-    } else {
-        "TREND"
+    let outlook_label = match outlook.regime {
+        dealer_read::OutlookRegime::Pinning => "PINNING",
+        dealer_read::OutlookRegime::GammaSqueeze => "GAMMA_SQUEEZE",
+        dealer_read::OutlookRegime::ShortSqueeze => "SHORT_SQUEEZE",
+        dealer_read::OutlookRegime::TrendDown => "TREND_DOWN",
+        dealer_read::OutlookRegime::TrendUp => "TREND_UP",
+        dealer_read::OutlookRegime::Range => "RANGE",
+        dealer_read::OutlookRegime::Neutral => "NEUTRAL",
     };
     TerminalReadPanel {
-        score,
+        score: tr.score,
         bias: bias.to_owned(),
         regime: regime.to_owned(),
-        outlook: outlook.to_owned(),
-        confidence: long.max(short),
+        outlook: outlook_label.to_owned(),
+        confidence: tr.confidence,
+        no_trade: tr.bracket.no_trade,
+        engaged: tr.engaged,
+        zero_dte: vec![
+            Metric::new("Pin", zdte.pin.probability, ""),
+            Metric::new("Settle >1EM", zdte.settlement_risk, ""),
+            Metric::new("Pin Strength", tr.pin_strength / 100.0, ""),
+        ],
+    }
+}
+
+/// The read panel before any chain structure exists: abstaining, never
+/// invented.
+fn empty_read_panel() -> TerminalReadPanel {
+    TerminalReadPanel {
+        score: 0.0,
+        bias: "NEUTRAL".to_owned(),
+        regime: "PIN".to_owned(),
+        outlook: "NEUTRAL".to_owned(),
+        confidence: 0.0,
         no_trade: false,
-        engaged: thesis.engagement,
+        engaged: Readout {
+            state: BinaryState::Inactive,
+            score: 0.0,
+        },
         zero_dte: Vec::new(),
     }
 }
@@ -395,6 +449,28 @@ fn compose_chain(
             ]
         })
         .unwrap_or_default();
+
+    // Dealer-structure profile for the read composites (spec 03 E6-E8).
+    let read_profile = ProfileInputs {
+        spot,
+        net_gex: gexs.net_gex,
+        gamma_flip: gexs.gamma_flip,
+        magnet: zones.gravity.primary_magnet,
+        call_wall: gexs.call_wall.as_ref().map(|w| w.strike),
+        put_wall: gexs.put_wall.as_ref().map(|w| w.strike),
+        expected_move_pct: gexs.expected_move_pct,
+        total_call_oi: oi_by_strike.values().map(|a| a.call_oi).sum(),
+        total_put_oi: oi_by_strike.values().map(|a| a.put_oi).sum(),
+        strikes: gexs
+            .profile
+            .iter()
+            .map(|r| StrikeGex {
+                strike: r.strike,
+                net_gex: r.gex,
+            })
+            .collect(),
+    };
+    mem.chain_profile = Some(read_profile);
 
     let dealer_panel = map_dealer(&gexs, &zones, spot);
     let flow_panel = FlowPanel {

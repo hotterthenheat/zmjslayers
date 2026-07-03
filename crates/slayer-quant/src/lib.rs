@@ -8,6 +8,7 @@
 pub mod black_scholes;
 pub mod dist;
 mod error;
+pub mod first_passage;
 pub mod monte_carlo;
 pub mod realized_vol;
 pub mod rnd;

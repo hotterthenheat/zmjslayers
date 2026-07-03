@@ -15,6 +15,31 @@ const DAYS_PER_YEAR: f64 = 365.0;
 /// kernel's expectation of a positive tenor). One hour.
 const MIN_T_YEARS: f64 = 1.0 / (DAYS_PER_YEAR * 24.0);
 
+/// US regular session open, milliseconds into the UTC day (09:30 ET at the
+/// winter UTC−5 offset ⇒ 14:30 UTC). A DST-aware calendar is a follow-up;
+/// the anchor is a documented calendar rule, never a fabricated value.
+const SESSION_OPEN_UTC_MS: u64 = (14 * 3600 + 1800) * 1000;
+/// US regular session close, milliseconds into the UTC day (16:00 ET winter
+/// ⇒ 21:00 UTC).
+const SESSION_CLOSE_UTC_MS: u64 = 21 * 3600 * 1000;
+/// Milliseconds per hour.
+const MS_PER_HOUR: f64 = 3_600_000.0;
+
+/// Hours remaining in the regular session at `ts`, clamped to
+/// `[0, 6.5]`: full session before the open, linear countdown within it,
+/// zero after the close.
+#[must_use]
+pub fn hours_to_session_close(ts: TsMillis) -> f64 {
+    let into_day = ts.0 % (MS_PER_DAY as u64);
+    if into_day <= SESSION_OPEN_UTC_MS {
+        (SESSION_CLOSE_UTC_MS - SESSION_OPEN_UTC_MS) as f64 / MS_PER_HOUR
+    } else if into_day >= SESSION_CLOSE_UTC_MS {
+        0.0
+    } else {
+        (SESSION_CLOSE_UTC_MS - into_day) as f64 / MS_PER_HOUR
+    }
+}
+
 /// Days from the civil date 1970-01-01 (Howard Hinnant's algorithm), valid
 /// for any proleptic Gregorian date.
 fn days_from_civil(y: i64, m: u32, d: u32) -> i64 {
@@ -69,6 +94,20 @@ mod tests {
             },
         );
         assert!((t - 1.0).abs() < 1e-9, "got {t}");
+    }
+
+    #[test]
+    fn session_clock_counts_down() {
+        const DAY: u64 = 86_400_000;
+        // Before the open: full session.
+        let pre = TsMillis(3 * DAY + 12 * 3_600_000);
+        assert!((hours_to_session_close(pre) - 6.5).abs() < 1e-9);
+        // 15:30 UTC: 5.5 hours remain.
+        let mid = TsMillis(3 * DAY + (15 * 3600 + 1800) * 1000);
+        assert!((hours_to_session_close(mid) - 5.5).abs() < 1e-9);
+        // After the close: zero.
+        let post = TsMillis(3 * DAY + 22 * 3_600_000);
+        assert_eq!(hours_to_session_close(post), 0.0);
     }
 
     #[test]
