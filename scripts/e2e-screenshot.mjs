@@ -25,8 +25,8 @@ await page.waitForSelector('.engine-cell', { timeout: 20000 })
 await page.waitForTimeout(2500)
 
 const summary = await page.evaluate(() => {
-  const feed = document.querySelector('.feed-badge')?.textContent ?? '?'
-  const spot = document.querySelector('.header-spot-px')?.textContent ?? '?'
+  const feed = document.querySelector('.feed-pill-label')?.textContent ?? '?'
+  const spot = document.querySelector('.hero-px')?.textContent ?? '?'
   const engines = [...document.querySelectorAll('.engine-cell')].map((c) => ({
     name: c.querySelector('.engine-name')?.textContent,
     state: c.querySelector('.engine-state')?.textContent,
