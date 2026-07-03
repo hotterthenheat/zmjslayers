@@ -1061,6 +1061,7 @@ dependencies = [
 name = "slayer-engines"
 version = "0.1.0"
 dependencies = [
+ "serde",
  "serde_json",
  "slayer-core",
  "slayer-quant",
@@ -1079,6 +1080,7 @@ dependencies = [
  "serde",
  "serde_json",
  "slayer-core",
+ "slayer-quant",
  "thiserror",
  "tokio",
  "tokio-stream",

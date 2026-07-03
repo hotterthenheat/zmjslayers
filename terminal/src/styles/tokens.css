@@ -1,0 +1,56 @@
+/*
+ * Slayer Terminal design tokens.
+ *
+ * One theme: dark, cold, dense. Typography is the SF Pro system stack with
+ * tabular numerals globally — numbers must not wiggle as they tick.
+ * Binary state renders in exactly two visual registers: ACTIVE (signal
+ * blue) and INACTIVE (structural gray). There is no third register.
+ */
+
+:root {
+  /* Surfaces */
+  --bg: #07090d;
+  --surface: #0d1017;
+  --surface-raised: #12161f;
+  --border: #1b2130;
+  --border-strong: #273042;
+
+  /* Text */
+  --text: #c8d1dc;
+  --text-dim: #7d8794;
+  --text-faint: #4d5665;
+  --num: #e8eef5;
+
+  /* Binary state — the only two registers */
+  --state-active: #4da3ff;
+  --state-active-bg: rgba(77, 163, 255, 0.12);
+  --state-inactive: #566070;
+  --state-inactive-bg: rgba(86, 96, 112, 0.08);
+
+  /* Direction (data, not state) */
+  --dir-up: #2fa370;
+  --dir-down: #c74e4e;
+
+  /* Accents */
+  --accent-amber: #d29922;
+  --gex-positive: #3fb27f;
+  --gex-negative: #d0629a;
+
+  /* Typography */
+  --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+    "Segoe UI", "Helvetica Neue", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "SFMono-Regular", Menlo, Consolas,
+    monospace;
+  --fs-label: 10px;
+  --fs-ui: 11px;
+  --fs-num: 12px;
+  --fs-num-lg: 15px;
+  --fs-num-xl: 22px;
+
+  /* Density */
+  --pad-panel: 8px;
+  --pad-cell: 4px;
+  --row-h: 20px;
+  --statusbar-h: 26px;
+  --panel-title-h: 24px;
+}

@@ -1,0 +1,58 @@
+@import "./tokens.css";
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: var(--fs-ui);
+  /* Tabular numerals globally: ticking numbers must not reflow. */
+  font-feature-settings: "tnum" 1, "ss01" 1;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+::selection {
+  background: rgba(77, 163, 255, 0.3);
+}
+
+/* Scrollbars: thin, structural, never decorative. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+  color: var(--num);
+}
+
+.label {
+  font-size: var(--fs-label);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.dir-up {
+  color: var(--dir-up);
+}
+
+.dir-down {
+  color: var(--dir-down);
+}

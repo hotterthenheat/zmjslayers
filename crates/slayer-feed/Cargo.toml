@@ -9,6 +9,7 @@ license.workspace = true
 
 [dependencies]
 slayer-core = { workspace = true }
+slayer-quant = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true }
 tokio-stream = { workspace = true }
