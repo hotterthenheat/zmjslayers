@@ -11,6 +11,7 @@ license.workspace = true
 slayer-core = { workspace = true }
 slayer-quant = { workspace = true }
 slayer-engines = { workspace = true }
+slayer-signal = { workspace = true }
 slayer-feed = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true }

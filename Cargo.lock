@@ -1099,6 +1099,7 @@ dependencies = [
  "slayer-engines",
  "slayer-feed",
  "slayer-quant",
+ "slayer-signal",
  "thiserror",
  "tokio",
  "tokio-stream",

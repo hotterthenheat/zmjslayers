@@ -26,6 +26,8 @@ use slayer_engines::zones::{self, GravityConfig, GravityStrikeInput, WallInput, 
 use slayer_quant::realized_vol;
 use slayer_quant::rnd;
 use slayer_quant::vol_metrics;
+use slayer_signal::decision::{self, GateInputs};
+use slayer_signal::risk::{self, LiquidityScore, STABILITY_MAX_DEFAULT};
 use std::collections::HashMap;
 
 /// Risk-free rate applied across the chain engines (annualized decimal).
@@ -44,6 +46,8 @@ const ATR_FALLBACK_PCT: f64 = 0.01;
 const MIN_CANDLES: usize = 30;
 /// Recent closes fed to the dealer-read momentum window.
 const READ_CLOSE_WINDOW: usize = 20;
+/// ATM mid prices retained for the liquidity quote-stability term.
+const ATM_MID_HISTORY_CAP: usize = 20;
 
 /// Chain-derived panels, cached so an unchanged chain (the feed emits candles
 /// far more often than chain snapshots) is not re-run through the dealer
@@ -80,6 +84,10 @@ pub struct EngineMemory {
     chain_cache: Option<ChainCache>,
     /// Dealer-structure profile for the read composites, refreshed per chain.
     chain_profile: Option<ProfileInputs>,
+    /// Recent ATM mid prices for the liquidity quote-stability term.
+    atm_mid_history: Vec<f64>,
+    /// Live ATM liquidity score, refreshed per chain.
+    atm_liquidity: Option<LiquidityScore>,
     /// Prior read-engagement state for hysteresis.
     prev_read_engaged: BinaryState,
 }
@@ -100,6 +108,15 @@ impl EngineMemory {
                 self.charm_history.remove(0);
             }
             self.charm_history.push(abs_charm);
+        }
+    }
+
+    fn push_atm_mid(&mut self, mid: f64) {
+        if mid.is_finite() && mid > 0.0 {
+            if self.atm_mid_history.len() == ATM_MID_HISTORY_CAP {
+                self.atm_mid_history.remove(0);
+            }
+            self.atm_mid_history.push(mid);
         }
     }
 
@@ -241,7 +258,7 @@ impl PipelineState {
             }
             None => empty_read_panel(),
         };
-        let decision = abstaining_decision();
+        let decision = compose_decision(&thesis, &dealer_panel, &regime, mem);
 
         Some(TerminalSnapshot {
             wire_version: WIRE_VERSION,
@@ -320,21 +337,79 @@ fn empty_read_panel() -> TerminalReadPanel {
     }
 }
 
-/// A decision panel that abstains: no opportunity is asserted until the full
-/// gate (EV / calibrated probability / tail risk / trust) is wired. Honest by
-/// construction — never a fabricated ACTIVE.
-fn abstaining_decision() -> DecisionPanel {
+/// The decision gate over what the terminal actually measures. The
+/// journal-dependent inputs (EV, calibrated probability, reward:risk, tail
+/// risk, trust, sample count) FAIL CLOSED as `NaN`/0 until a real trade
+/// journal exists — the legacy fabricated them (D11); we surface them as
+/// explicitly unavailable conditions instead. The measured inputs (thesis
+/// stability, dealer01, ATM liquidity, regime confidence) are live, so the
+/// gate breakdown shows exactly what passes today and what awaits history.
+/// Opportunity quality credits only measured components (unavailable terms
+/// contribute zero points).
+fn compose_decision(
+    thesis: &ThesisReadout,
+    dealer: &DealerPanel,
+    regime: &regime::RegimeState,
+    mem: &EngineMemory,
+) -> DecisionPanel {
+    let liquidity_total = mem.atm_liquidity.as_ref().map_or(0.0, |l| l.total);
+    let thesis_stability = f64::from(thesis.long_score.max(thesis.short_score));
+    let gate = GateInputs {
+        position_open: false,
+        // Journal-dependent quantities: NaN fails every comparison, so the
+        // gate fails closed rather than crediting the unknown.
+        ev: f64::NAN,
+        p_cal: f64::NAN,
+        reward_risk: f64::NAN,
+        tail_risk: f64::NAN,
+        trust: f64::NAN,
+        n_samples: 0,
+        // Measured live.
+        liquidity: liquidity_total,
+        dealer01: dealer.dealer01,
+        thesis_stability,
+    };
+    // Quality from measured components only: liquidity (15 pts) + regime
+    // stability (5 pts). Unavailable terms contribute zero by construction.
+    let quality = decision::OQ_W_LIQ * (liquidity_total / 100.0).clamp(0.0, 1.0)
+        + decision::OQ_W_REGIME * regime.classification.confident.score.clamp(0.0, 1.0);
+    let readout = decision::decision_gate(&gate, quality);
+
+    let action = match readout.action {
+        decision::DecisionAction::Enter => "ENTER",
+        decision::DecisionAction::Wait => "WAIT",
+        decision::DecisionAction::Hold => "HOLD",
+        decision::DecisionAction::Reduce => "REDUCE",
+        decision::DecisionAction::Exit => "EXIT",
+    };
+    let conditions = readout
+        .conditions
+        .iter()
+        .map(|c| {
+            // The sample-count condition is journal-dependent too: an empty
+            // journal reads n = 0, which is "awaiting journal", not a
+            // measured zero.
+            let unavailable =
+                !c.value.is_finite() || (c.label.starts_with("n >=") && c.value == 0.0);
+            slayer_core::wire::GateCondition {
+                label: if unavailable {
+                    format!("{} — awaiting journal", c.label)
+                } else {
+                    c.label.clone()
+                },
+                pass: c.pass,
+                value: if unavailable { 0.0 } else { c.value },
+            }
+        })
+        .collect();
     DecisionPanel {
-        opportunity: Readout {
-            state: BinaryState::Inactive,
-            score: 0.0,
-        },
-        action: "WAIT".to_owned(),
+        opportunity: readout.opportunity,
+        action: action.to_owned(),
         expected_value: 0.0,
         calibrated_p: 0.0,
         reward_risk: 0.0,
         tail_risk: 0.0,
-        conditions: Vec::new(),
+        conditions,
     }
 }
 
@@ -471,6 +546,30 @@ fn compose_chain(
             .collect(),
     };
     mem.chain_profile = Some(read_profile);
+
+    // Live ATM liquidity: the quote nearest spot with a two-sided market.
+    // Quote-stability runs on the RELATIVE-mid history ring (risk.rs, D10).
+    mem.atm_liquidity = chain
+        .quotes
+        .iter()
+        .filter(|q| q.bid.is_some() && q.ask.is_some())
+        .min_by(|a, b| (a.strike - spot).abs().total_cmp(&(b.strike - spot).abs()))
+        .and_then(|q| {
+            let (bid, ask) = (q.bid?, q.ask?);
+            let liq = risk::liquidity_score(
+                bid,
+                ask,
+                q.volume,
+                q.open_interest,
+                &mem.atm_mid_history,
+                STABILITY_MAX_DEFAULT,
+            )
+            .ok();
+            if let Some(mid) = q.mid() {
+                mem.push_atm_mid(mid);
+            }
+            liq
+        });
 
     let dealer_panel = map_dealer(&gexs, &zones, spot);
     let flow_panel = FlowPanel {
