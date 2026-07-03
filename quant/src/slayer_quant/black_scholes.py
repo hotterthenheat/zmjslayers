@@ -12,7 +12,7 @@ year, vega per unit vol.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 
 import numpy as np
 from scipy.optimize import brentq
@@ -26,7 +26,7 @@ IV_HI = 5.0
 IV_PRICE_TOL = 1e-10
 
 
-class Right(str, Enum):
+class Right(StrEnum):
     """Option right."""
 
     CALL = "CALL"

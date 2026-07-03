@@ -307,7 +307,14 @@ pub fn vanna_flow(net_vanna: f64, prev_net_vanna: Option<f64>, previous: BinaryS
         FlowDirection::Pressuring
     };
     let engaged = Readout::resolve_from(&ENGAGED_BAND, net.abs(), previous);
-    VannaFlow { net, velocity, trend_score, trend, direction, engaged }
+    VannaFlow {
+        net,
+        velocity,
+        trend_score,
+        trend,
+        direction,
+        engaged,
+    }
 }
 
 /// Charm-decay sub-engine (E2 step 4).
@@ -315,7 +322,11 @@ pub fn vanna_flow(net_vanna: f64, prev_net_vanna: Option<f64>, previous: BinaryS
 pub fn charm_bias(net_charm: f64, prior_max_abs_charm: f64, previous: BinaryState) -> CharmBias {
     let net_per_day = fin(net_charm);
     let prior_max = fin(prior_max_abs_charm);
-    let intensity = if prior_max > 0.0 { (net_per_day.abs() / prior_max).min(1.0) } else { 0.0 };
+    let intensity = if prior_max > 0.0 {
+        (net_per_day.abs() / prior_max).min(1.0)
+    } else {
+        0.0
+    };
     let bias = if net_per_day.abs() < DEALER_EPS {
         BiasDirection::Neutral
     } else if net_per_day > 0.0 {
@@ -324,7 +335,12 @@ pub fn charm_bias(net_charm: f64, prior_max_abs_charm: f64, previous: BinaryStat
         BiasDirection::Bearish
     };
     let engaged = Readout::resolve_from(&ENGAGED_BAND, net_per_day.abs(), previous);
-    CharmBias { net_per_day, intensity, bias, engaged }
+    CharmBias {
+        net_per_day,
+        intensity,
+        bias,
+        engaged,
+    }
 }
 
 /// Gamma center-of-mass migration sub-engine (E2 step 5).
@@ -350,8 +366,19 @@ pub fn oi_migration(
     } else {
         MigrationDirection::Bearish
     };
-    let migrating = Readout::resolve_from(&FLOW_ACTIVE_BAND, score.abs() / MIGRATION_STABLE_BAND, previous);
-    Migration { com_current, com_previous, shift, score, direction, migrating }
+    let migrating = Readout::resolve_from(
+        &FLOW_ACTIVE_BAND,
+        score.abs() / MIGRATION_STABLE_BAND,
+        previous,
+    );
+    Migration {
+        com_current,
+        com_previous,
+        shift,
+        score,
+        direction,
+        migrating,
+    }
 }
 
 /// Gamma velocity/acceleration sub-engine (E2 step 6). D1: the STABLE band is
@@ -380,7 +407,13 @@ pub fn gamma_dynamics(
         GammaHedgeDirection::RemovingHedges
     };
     let hedging_active = Readout::resolve_from(&FLOW_ACTIVE_BAND, velocity_score.abs(), previous);
-    GammaDynamics { velocity, acceleration, velocity_score, direction, hedging_active }
+    GammaDynamics {
+        velocity,
+        acceleration,
+        velocity_score,
+        direction,
+        hedging_active,
+    }
 }
 
 /// OI-flow sub-engine (E2 step 7). `dt_min` is an explicit parameter (D2).
@@ -392,7 +425,11 @@ pub fn oi_flow(
     previous: BinaryState,
 ) -> OiFlow {
     let total = fin(total_oi).max(0.0);
-    let dt = if dt_min.is_finite() && dt_min > DT_MIN_FLOOR { dt_min } else { DT_MIN_FLOOR };
+    let dt = if dt_min.is_finite() && dt_min > DT_MIN_FLOOR {
+        dt_min
+    } else {
+        DT_MIN_FLOOR
+    };
     let velocity = prev_total_oi.map_or(0.0, |p| (total - fin(p)) / dt);
     let thresh = (OI_VEL_REL_THRESH * total).max(OI_VEL_ABS_FLOOR);
     let velocity_score = velocity / thresh;
@@ -404,15 +441,29 @@ pub fn oi_flow(
         OiFlowDirection::Unwinding
     };
     let flowing = Readout::resolve_from(&FLOW_ACTIVE_BAND, velocity_score.abs(), previous);
-    OiFlow { total_oi: total, velocity, velocity_score, direction, flowing }
+    OiFlow {
+        total_oi: total,
+        velocity,
+        velocity_score,
+        direction,
+        flowing,
+    }
 }
 
 /// Resolve all five time-derivative dealer sub-engines from one snapshot.
 #[must_use]
 pub fn dealer_dynamics(input: &DealerDynamicsInput) -> DealerDynamics {
     DealerDynamics {
-        vanna: vanna_flow(input.net_vanna, input.prev_net_vanna, input.prev_states.vanna),
-        charm: charm_bias(input.net_charm, input.prior_max_abs_charm, input.prev_states.charm),
+        vanna: vanna_flow(
+            input.net_vanna,
+            input.prev_net_vanna,
+            input.prev_states.vanna,
+        ),
+        charm: charm_bias(
+            input.net_charm,
+            input.prior_max_abs_charm,
+            input.prev_states.charm,
+        ),
         migration: oi_migration(
             input.gex_com,
             input.prev_gex_com,
@@ -425,7 +476,12 @@ pub fn dealer_dynamics(input: &DealerDynamicsInput) -> DealerDynamics {
             input.prev2_net_gex,
             input.prev_states.gamma,
         ),
-        oi_flow: oi_flow(input.total_oi, input.prev_total_oi, input.dt_min, input.prev_states.oi_flow),
+        oi_flow: oi_flow(
+            input.total_oi,
+            input.prev_total_oi,
+            input.dt_min,
+            input.prev_states.oi_flow,
+        ),
     }
 }
 

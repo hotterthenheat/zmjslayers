@@ -81,7 +81,10 @@ async fn replay(
     Query(q): Query<ReplayQuery>,
 ) -> Result<Response, Response> {
     let symbol = parse_symbol(&symbol)?;
-    let frames = state.hub.replay(&symbol, q.n.unwrap_or(DEFAULT_REPLAY_FRAMES)).await;
+    let frames = state
+        .hub
+        .replay(&symbol, q.n.unwrap_or(DEFAULT_REPLAY_FRAMES))
+        .await;
     // Frames are already JSON; join without re-parsing.
     let mut body = String::with_capacity(frames.iter().map(|f| f.len() + 1).sum::<usize>() + 2);
     body.push('[');
@@ -114,12 +117,20 @@ async fn ws_session(mut socket: WebSocket, state: AppState) {
         "wire_version": slayer_core::wire::WIRE_VERSION,
         "feed": state.feed_name,
     });
-    if socket.send(Message::Text(hello.to_string().into())).await.is_err() {
+    if socket
+        .send(Message::Text(hello.to_string().into()))
+        .await
+        .is_err()
+    {
         return;
     }
     // Prime with the latest frame per symbol so panels render immediately.
     for frame in state.hub.latest_all().await {
-        if socket.send(Message::Text(frame.to_string().into())).await.is_err() {
+        if socket
+            .send(Message::Text(frame.to_string().into()))
+            .await
+            .is_err()
+        {
             return;
         }
     }

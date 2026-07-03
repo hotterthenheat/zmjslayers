@@ -169,7 +169,11 @@ impl GexParams {
     /// Build a pricing context.
     #[must_use]
     pub const fn new(t_years: f64, rate: f64, div_yield: f64) -> Self {
-        Self { t_years, rate, div_yield }
+        Self {
+            t_years,
+            rate,
+            div_yield,
+        }
     }
 
     fn validate(&self) -> Result<(), GexError> {
@@ -230,7 +234,15 @@ pub struct StrikeExposure {
 
 impl StrikeExposure {
     fn empty(strike: f64) -> Self {
-        Self { strike, gex: 0.0, dex: 0.0, vex: 0.0, charm: 0.0, call_gex: 0.0, put_gex: 0.0 }
+        Self {
+            strike,
+            gex: 0.0,
+            dex: 0.0,
+            vex: 0.0,
+            charm: 0.0,
+            call_gex: 0.0,
+            put_gex: 0.0,
+        }
     }
 }
 
@@ -371,20 +383,19 @@ pub fn analyze(chain: &OptionChain, params: &GexParams) -> Result<GexStructure, 
         let oi = q.open_interest as f64;
 
         let provider = q.greeks;
-        let bs = q
-            .iv
-            .filter(|iv| iv.is_finite() && *iv >= 0.0)
-            .and_then(|iv| {
-                let inputs = BsInputs {
-                    spot,
-                    strike: q.strike,
-                    t_years: params.t_years,
-                    vol: iv,
-                    rate: params.rate,
-                    div_yield: params.div_yield,
-                };
-                greeks(&inputs, q.right).ok()
-            });
+        let bs =
+            q.iv.filter(|iv| iv.is_finite() && *iv >= 0.0)
+                .and_then(|iv| {
+                    let inputs = BsInputs {
+                        spot,
+                        strike: q.strike,
+                        t_years: params.t_years,
+                        vol: iv,
+                        rate: params.rate,
+                        div_yield: params.div_yield,
+                    };
+                    greeks(&inputs, q.right).ok()
+                });
 
         if provider.is_none() && bs.is_none() {
             excluded += 1;
@@ -488,7 +499,12 @@ pub fn analyze(chain: &OptionChain, params: &GexParams) -> Result<GexStructure, 
         dealer01,
         expected_move_pct,
         expected_move_points,
-        coverage: Coverage { total, resolved, excluded, vanna_resolved },
+        coverage: Coverage {
+            total,
+            resolved,
+            excluded,
+            vanna_resolved,
+        },
     })
 }
 
@@ -500,7 +516,11 @@ fn finite(v: Option<f64>) -> Option<f64> {
 
 /// DSI sub-score `tanh(k·net/gross)`, zero when there is no gross exposure.
 fn exposure_score(net: f64, gross: f64) -> f64 {
-    if gross > 0.0 { (EXPOSURE_TANH_K * net / gross).tanh() } else { 0.0 }
+    if gross > 0.0 {
+        (EXPOSURE_TANH_K * net / gross).tanh()
+    } else {
+        0.0
+    }
 }
 
 /// Cumulative-GEX gamma flip (SqueezeMetrics convention). Returns the crossing
@@ -524,9 +544,16 @@ fn gamma_flip(rows: &[StrikeExposure]) -> Option<Flip> {
     for (i, row) in rows.iter().enumerate() {
         let ci = cums[i];
         if ci == 0.0 {
-            let cj = if i + 1 < rows.len() { cums[i + 1] } else { cums[i - 1] };
+            let cj = if i + 1 < rows.len() {
+                cums[i + 1]
+            } else {
+                cums[i - 1]
+            };
             let quality = ((cj - ci).abs() / peak).clamp(0.0, 1.0);
-            return Some(Flip { price: row.strike, quality });
+            return Some(Flip {
+                price: row.strike,
+                quality,
+            });
         }
         if i + 1 < rows.len() {
             let cj = cums[i + 1];
@@ -561,10 +588,17 @@ fn wall(rows: &[StrikeExposure], spot: f64, gross_gex: f64, side: WallSide) -> O
         .filter(|(_, g)| g.abs() > 0.0)
         .max_by(|(_, a), (_, b)| a.abs().total_cmp(&b.abs()))?;
 
-    let dominance_score =
-        if gross_gex > 0.0 { (gex.abs() / gross_gex).clamp(0.0, 1.0) } else { 0.0 };
+    let dominance_score = if gross_gex > 0.0 {
+        (gex.abs() / gross_gex).clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
     let dominance = Readout::resolve(&WALL_DOMINANCE_BAND, dominance_score);
-    Some(Wall { strike, gex, dominance })
+    Some(Wall {
+        strike,
+        gex,
+        dominance,
+    })
 }
 
 /// IV of the quote whose strike is nearest spot (ties broken by lower strike
@@ -575,7 +609,10 @@ fn nearest_atm_iv(chain: &OptionChain, spot: f64) -> Option<f64> {
         .quotes
         .iter()
         .filter(|q| q.strike.is_finite() && q.strike > 0.0)
-        .filter_map(|q| q.iv.filter(|iv| iv.is_finite() && *iv >= 0.0).map(|iv| (q, iv)))
+        .filter_map(|q| {
+            q.iv.filter(|iv| iv.is_finite() && *iv >= 0.0)
+                .map(|iv| (q, iv))
+        })
         .min_by(|(a, _), (b, _)| {
             (a.strike - spot)
                 .abs()
@@ -607,7 +644,12 @@ mod tests {
     }
 
     fn greek(delta: f64, gamma: f64) -> Greeks {
-        Greeks { delta, gamma, theta: 0.0, vega: 0.0 }
+        Greeks {
+            delta,
+            gamma,
+            theta: 0.0,
+            vega: 0.0,
+        }
     }
 
     fn quote(
@@ -620,7 +662,11 @@ mod tests {
         OptionQuote {
             strike,
             right,
-            expiry: ExpiryDate { year: 2026, month: 7, day: 17 },
+            expiry: ExpiryDate {
+                year: 2026,
+                month: 7,
+                day: 17,
+            },
             bid: None,
             ask: None,
             volume: 0,
@@ -631,7 +677,13 @@ mod tests {
     }
 
     fn chain(spot: f64, mult: f64, quotes: Vec<OptionQuote>) -> OptionChain {
-        OptionChain { underlying: sym(), spot, ts: TsMillis(0), multiplier: mult, quotes }
+        OptionChain {
+            underlying: sym(),
+            spot,
+            ts: TsMillis(0),
+            multiplier: mult,
+            quotes,
+        }
     }
 
     fn params() -> GexParams {
@@ -670,7 +722,13 @@ mod tests {
 
     #[test]
     fn single_dominant_call_is_the_call_wall_with_full_dominance() {
-        let qs = vec![quote(110.0, OptionRight::Call, 500, None, Some(greek(0.5, 0.002)))];
+        let qs = vec![quote(
+            110.0,
+            OptionRight::Call,
+            500,
+            None,
+            Some(greek(0.5, 0.002)),
+        )];
         let r = analyze(&chain(100.0, 100.0, qs), &GexParams::default()).unwrap();
         let cw = r.call_wall.unwrap();
         assert!((cw.strike - 110.0).abs() < 1e-12);
@@ -744,7 +802,14 @@ mod tests {
         let iv = 0.25;
         let p = GexParams::new(0.5, RATE, 0.0);
         let bs = greeks(
-            &BsInputs { spot: 100.0, strike: 100.0, t_years: 0.5, vol: iv, rate: RATE, div_yield: 0.0 },
+            &BsInputs {
+                spot: 100.0,
+                strike: 100.0,
+                t_years: 0.5,
+                vol: iv,
+                rate: RATE,
+                div_yield: 0.0,
+            },
             OptionRight::Call,
         )
         .unwrap();
@@ -763,7 +828,14 @@ mod tests {
         let iv = 0.2;
         let p = GexParams::new(0.5, RATE, 0.0);
         let bs = greeks(
-            &BsInputs { spot: 100.0, strike: 100.0, t_years: 0.5, vol: iv, rate: RATE, div_yield: 0.0 },
+            &BsInputs {
+                spot: 100.0,
+                strike: 100.0,
+                t_years: 0.5,
+                vol: iv,
+                rate: RATE,
+                div_yield: 0.0,
+            },
             OptionRight::Call,
         )
         .unwrap();
@@ -776,15 +848,26 @@ mod tests {
                     OptionRight::Call,
                     100,
                     None,
-                    Some(Greeks { delta: bs.delta, gamma: bs.gamma, theta: 0.0, vega: 0.0 }),
+                    Some(Greeks {
+                        delta: bs.delta,
+                        gamma: bs.gamma,
+                        theta: 0.0,
+                        vega: 0.0,
+                    }),
                 )],
             ),
             &p,
         )
         .unwrap();
-        let via_iv =
-            analyze(&chain(100.0, 100.0, vec![quote(100.0, OptionRight::Call, 100, Some(iv), None)]), &p)
-                .unwrap();
+        let via_iv = analyze(
+            &chain(
+                100.0,
+                100.0,
+                vec![quote(100.0, OptionRight::Call, 100, Some(iv), None)],
+            ),
+            &p,
+        )
+        .unwrap();
         assert!((via_provider.net_gex - via_iv.net_gex).abs() < 1e-9);
         assert!((via_provider.net_dex - via_iv.net_dex).abs() < 1e-9);
         // Provider greeks carry no vanna -> no VEX; the IV path has it.
@@ -822,7 +905,13 @@ mod tests {
 
     #[test]
     fn expected_move_absent_without_any_iv() {
-        let qs = vec![quote(100.0, OptionRight::Call, 100, None, Some(greek(0.5, 0.01)))];
+        let qs = vec![quote(
+            100.0,
+            OptionRight::Call,
+            100,
+            None,
+            Some(greek(0.5, 0.01)),
+        )];
         let r = analyze(&chain(100.0, 100.0, qs), &GexParams::default()).unwrap();
         assert!(r.expected_move_pct.is_none());
         assert!(r.expected_move_points.is_none());
@@ -899,19 +988,24 @@ mod tests {
     #[test]
     fn structure_serde_round_trips() {
         let r = analyze(&sample_chain(), &params()).unwrap();
-        let back: GexStructure =
-            serde_json::from_str(&serde_json::to_string(&r).unwrap()).unwrap();
+        let back: GexStructure = serde_json::from_str(&serde_json::to_string(&r).unwrap()).unwrap();
         // Structural fields survive JSON exactly.
         assert_eq!(r.coverage, back.coverage);
         assert_eq!(r.flip_readout.state, back.flip_readout.state);
         assert_eq!(r.gamma_flip.is_some(), back.gamma_flip.is_some());
         assert_eq!(r.profile.len(), back.profile.len());
-        assert_eq!(r.call_wall.map(|w| w.strike), back.call_wall.map(|w| w.strike));
+        assert_eq!(
+            r.call_wall.map(|w| w.strike),
+            back.call_wall.map(|w| w.strike)
+        );
         assert_eq!(
             r.call_wall.map(|w| w.dominance.state),
             back.call_wall.map(|w| w.dominance.state)
         );
-        assert_eq!(r.put_wall.map(|w| w.dominance.state), back.put_wall.map(|w| w.dominance.state));
+        assert_eq!(
+            r.put_wall.map(|w| w.dominance.state),
+            back.put_wall.map(|w| w.dominance.state)
+        );
         // Continuous payloads survive to within floating-point round-trip
         // tolerance: the workspace serde_json parses without the
         // `float_roundtrip` feature, so a JSON f64 may shift by ~1 ULP. The wire
@@ -924,7 +1018,10 @@ mod tests {
         assert!(close(r.dealer01, back.dealer01));
         assert!(close(r.gamma_flip.unwrap(), back.gamma_flip.unwrap()));
         assert!(close(r.flip_readout.score, back.flip_readout.score));
-        assert!(close(r.expected_move_pct.unwrap(), back.expected_move_pct.unwrap()));
+        assert!(close(
+            r.expected_move_pct.unwrap(),
+            back.expected_move_pct.unwrap()
+        ));
     }
 
     #[test]
@@ -943,7 +1040,11 @@ mod tests {
             GexError::InvalidTime(-1.0)
         );
         assert_eq!(
-            analyze(&chain(100.0, 100.0, q()), &GexParams::new(0.5, f64::NAN, 0.0)).unwrap_err(),
+            analyze(
+                &chain(100.0, 100.0, q()),
+                &GexParams::new(0.5, f64::NAN, 0.0)
+            )
+            .unwrap_err(),
             GexError::NonFiniteParams
         );
         assert_eq!(

@@ -60,7 +60,10 @@ impl HysteresisBand {
             activate_at.is_finite() && deactivate_at.is_finite(),
             "hysteresis thresholds must be finite"
         );
-        Self { activate_at, deactivate_at }
+        Self {
+            activate_at,
+            deactivate_at,
+        }
     }
 
     /// Degenerate band with a single threshold (no hysteresis).
@@ -106,13 +109,19 @@ impl Readout {
     /// previous defaults to `Inactive`).
     #[must_use]
     pub fn resolve(band: &HysteresisBand, score: f64) -> Self {
-        Self { state: band.resolve(score, BinaryState::Inactive), score }
+        Self {
+            state: band.resolve(score, BinaryState::Inactive),
+            score,
+        }
     }
 
     /// Resolve a score through a band carrying the previous state forward.
     #[must_use]
     pub fn resolve_from(band: &HysteresisBand, score: f64, previous: BinaryState) -> Self {
-        Self { state: band.resolve(score, previous), score }
+        Self {
+            state: band.resolve(score, previous),
+            score,
+        }
     }
 }
 
@@ -125,32 +134,62 @@ mod tests {
 
     #[test]
     fn activates_at_upper_threshold() {
-        assert_eq!(BAND.resolve(0.7, BinaryState::Inactive), BinaryState::Active);
-        assert_eq!(BAND.resolve(0.95, BinaryState::Inactive), BinaryState::Active);
+        assert_eq!(
+            BAND.resolve(0.7, BinaryState::Inactive),
+            BinaryState::Active
+        );
+        assert_eq!(
+            BAND.resolve(0.95, BinaryState::Inactive),
+            BinaryState::Active
+        );
     }
 
     #[test]
     fn deactivates_at_lower_threshold() {
-        assert_eq!(BAND.resolve(0.4, BinaryState::Active), BinaryState::Inactive);
-        assert_eq!(BAND.resolve(0.1, BinaryState::Active), BinaryState::Inactive);
+        assert_eq!(
+            BAND.resolve(0.4, BinaryState::Active),
+            BinaryState::Inactive
+        );
+        assert_eq!(
+            BAND.resolve(0.1, BinaryState::Active),
+            BinaryState::Inactive
+        );
     }
 
     #[test]
     fn holds_previous_state_inside_band() {
         assert_eq!(BAND.resolve(0.55, BinaryState::Active), BinaryState::Active);
-        assert_eq!(BAND.resolve(0.55, BinaryState::Inactive), BinaryState::Inactive);
+        assert_eq!(
+            BAND.resolve(0.55, BinaryState::Inactive),
+            BinaryState::Inactive
+        );
     }
 
     #[test]
     fn non_finite_scores_resolve_inactive() {
-        assert_eq!(BAND.resolve(f64::NAN, BinaryState::Active), BinaryState::Inactive);
-        assert_eq!(BAND.resolve(f64::INFINITY, BinaryState::Active), BinaryState::Inactive);
-        assert_eq!(BAND.resolve(f64::NEG_INFINITY, BinaryState::Active), BinaryState::Inactive);
+        assert_eq!(
+            BAND.resolve(f64::NAN, BinaryState::Active),
+            BinaryState::Inactive
+        );
+        assert_eq!(
+            BAND.resolve(f64::INFINITY, BinaryState::Active),
+            BinaryState::Inactive
+        );
+        assert_eq!(
+            BAND.resolve(f64::NEG_INFINITY, BinaryState::Active),
+            BinaryState::Inactive
+        );
     }
 
     #[test]
     fn wire_format_is_screaming_snake() {
-        assert_eq!(serde_json::to_string(&BinaryState::Active).unwrap(), "\"ACTIVE\"");
-        assert_eq!(serde_json::to_string(&BinaryState::Inactive).unwrap(), "\"INACTIVE\"");
+        assert_eq!(
+            serde_json::to_string(&BinaryState::Active).unwrap(),
+            "\"ACTIVE\""
+        );
+        assert_eq!(
+            serde_json::to_string(&BinaryState::Inactive).unwrap(),
+            "\"INACTIVE\""
+        );
     }
 }

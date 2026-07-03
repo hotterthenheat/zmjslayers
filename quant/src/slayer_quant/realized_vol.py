@@ -23,11 +23,15 @@ YZ_BETA = 1.34
 #: Minimum candles for return-based estimators (one return needs two bars,
 #: a sample variance needs two returns).
 MIN_BARS_RETURNS = 3
+#: Expected array rank of an OHLC matrix.
+_OHLC_NDIM = 2
+#: Columns of an OHLC matrix: open, high, low, close.
+_OHLC_COLS = 4
 
 
 def _validate(ohlc: np.ndarray, min_bars: int) -> np.ndarray:
     ohlc = np.asarray(ohlc, dtype=np.float64)
-    if ohlc.ndim != 2 or ohlc.shape[1] != 4:
+    if ohlc.ndim != _OHLC_NDIM or ohlc.shape[1] != _OHLC_COLS:
         raise ValueError("expected (n, 4) array of open, high, low, close")
     if len(ohlc) < min_bars:
         raise ValueError(f"insufficient data: needed {min_bars}, got {len(ohlc)}")

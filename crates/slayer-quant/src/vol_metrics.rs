@@ -226,17 +226,35 @@ pub fn vol_cone(
 /// short. Never fabricates (contrast legacy D9).
 #[must_use]
 pub fn iv_metrics(current_iv: f64, history: &[f64]) -> IvMetrics {
-    let hist: Vec<f64> = history.iter().copied().filter(|v| v.is_finite() && *v > 0.0).collect();
+    let hist: Vec<f64> = history
+        .iter()
+        .copied()
+        .filter(|v| v.is_finite() && *v > 0.0)
+        .collect();
     let n = hist.len();
     if !(current_iv.is_finite() && current_iv > 0.0) || n < IV_METRICS_MIN_HISTORY {
-        return IvMetrics { current_iv, rank: None, percentile: None, history_len: n };
+        return IvMetrics {
+            current_iv,
+            rank: None,
+            percentile: None,
+            history_len: n,
+        };
     }
     let min = hist.iter().copied().fold(f64::INFINITY, f64::min);
     let max = hist.iter().copied().fold(f64::NEG_INFINITY, f64::max);
-    let rank = if max > min { Some(((current_iv - min) / (max - min)).clamp(0.0, 1.0)) } else { None };
+    let rank = if max > min {
+        Some(((current_iv - min) / (max - min)).clamp(0.0, 1.0))
+    } else {
+        None
+    };
     let below = hist.iter().filter(|&&v| v < current_iv).count();
     let percentile = Some(below as f64 / n as f64);
-    IvMetrics { current_iv, rank, percentile, history_len: n }
+    IvMetrics {
+        current_iv,
+        rank,
+        percentile,
+        history_len: n,
+    }
 }
 
 /// Interpolate `(iv, strike)` at target absolute delta over per-contract points
@@ -276,7 +294,9 @@ pub fn skew_analytics(
         return Err(QuantError::Domain("skew: spot must be finite and positive"));
     }
     if !(t_years.is_finite() && t_years > 0.0) {
-        return Err(QuantError::Domain("skew: tenor must be finite and positive"));
+        return Err(QuantError::Domain(
+            "skew: tenor must be finite and positive",
+        ));
     }
     if !rate.is_finite() {
         return Err(QuantError::Domain("skew: rate must be finite"));
@@ -288,7 +308,9 @@ pub fn skew_analytics(
     let mut atm_pool: Vec<(f64, f64)> = Vec::new();
 
     for q in quotes {
-        let Some(iv) = quote_implied_vol(q, spot, t_years, rate) else { continue };
+        let Some(iv) = quote_implied_vol(q, spot, t_years, rate) else {
+            continue;
+        };
         let abs_delta = match q.greeks {
             Some(g) if g.delta.is_finite() => g.delta.abs(),
             _ => {
@@ -322,8 +344,11 @@ pub fn skew_analytics(
         .iter()
         .min_by(|a, b| (a.0 - spot).abs().total_cmp(&(b.0 - spot).abs()))
         .map_or(spot, |&(s, _)| s);
-    let atm_ivs: Vec<f64> =
-        atm_pool.iter().filter(|&&(s, _)| s == atm_strike).map(|&(_, iv)| iv).collect();
+    let atm_ivs: Vec<f64> = atm_pool
+        .iter()
+        .filter(|&&(s, _)| s == atm_strike)
+        .map(|&(_, iv)| iv)
+        .collect();
     let atm_iv = atm_ivs.iter().sum::<f64>() / atm_ivs.len() as f64;
 
     calls.sort_by(|a, b| a.0.total_cmp(&b.0));
@@ -377,7 +402,11 @@ mod tests {
     use rand_distr::{Distribution, StandardNormal};
     use slayer_core::{ExpiryDate, TsMillis};
 
-    const EXPIRY: ExpiryDate = ExpiryDate { year: 2026, month: 9, day: 18 };
+    const EXPIRY: ExpiryDate = ExpiryDate {
+        year: 2026,
+        month: 9,
+        day: 18,
+    };
     const PERIODS: f64 = 252.0;
 
     fn gbm_candles(true_vol: f64, n_bars: usize, seed: u64) -> Vec<Candle> {
@@ -396,7 +425,14 @@ mod tests {
                 high = high.max(price);
                 low = low.min(price);
             }
-            out.push(Candle { ts: TsMillis(bar as u64), open, high, low, close: price, volume: 0.0 });
+            out.push(Candle {
+                ts: TsMillis(bar as u64),
+                open,
+                high,
+                low,
+                close: price,
+                volume: 0.0,
+            });
         }
         out
     }
@@ -413,7 +449,12 @@ mod tests {
             assert!(w.p75 <= w.max + 1e-12);
             assert!(w.current >= w.min - 1e-12 && w.current <= w.max + 1e-12);
             assert!(w.sample_count >= VOL_CONE_MIN_SAMPLES);
-            assert!((w.median - 0.20).abs() < 0.06, "window {} median {}", w.window, w.median);
+            assert!(
+                (w.median - 0.20).abs() < 0.06,
+                "window {} median {}",
+                w.window,
+                w.median
+            );
         }
     }
 
@@ -466,14 +507,7 @@ mod tests {
 
     /// Build a chain with a parametric smile `iv(x) = atm − slope·x + curv·x²`,
     /// `x = ln(K/spot)`, over calls and puts. Positive `slope` ⇒ put skew.
-    fn smile_chain(
-        spot: f64,
-        atm: f64,
-        slope: f64,
-        curv: f64,
-        t: f64,
-        r: f64,
-    ) -> Vec<OptionQuote> {
+    fn smile_chain(spot: f64, atm: f64, slope: f64, curv: f64, t: f64, r: f64) -> Vec<OptionQuote> {
         let mut out = Vec::new();
         for i in 0..41 {
             let frac = 0.80 + 0.40 * i as f64 / 40.0;
@@ -482,7 +516,14 @@ mod tests {
             let iv = (atm - slope * x + curv * x * x).max(0.02);
             for right in [OptionRight::Call, OptionRight::Put] {
                 let p = price(
-                    &BsInputs { spot, strike: k, t_years: t, vol: iv, rate: r, div_yield: 0.0 },
+                    &BsInputs {
+                        spot,
+                        strike: k,
+                        t_years: t,
+                        vol: iv,
+                        rate: r,
+                        div_yield: 0.0,
+                    },
                     right,
                 )
                 .unwrap();
@@ -507,7 +548,11 @@ mod tests {
         let chain = smile_chain(100.0, 0.20, 0.6, 0.8, 0.25, 0.03);
         let s = skew_analytics(&chain, 100.0, 0.25, 0.03).unwrap();
         assert!(s.call_25d_iv.is_some() && s.put_25d_iv.is_some());
-        assert!(s.risk_reversal_25d.unwrap() < 0.0, "rr {:?}", s.risk_reversal_25d);
+        assert!(
+            s.risk_reversal_25d.unwrap() < 0.0,
+            "rr {:?}",
+            s.risk_reversal_25d
+        );
         assert!(s.butterfly_25d.unwrap() > 0.0, "bf {:?}", s.butterfly_25d);
         assert!(s.skew_slope.unwrap() < 0.0, "slope {:?}", s.skew_slope);
         assert!((s.atm_iv - 0.20).abs() < 0.02);

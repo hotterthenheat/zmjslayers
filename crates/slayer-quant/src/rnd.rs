@@ -167,7 +167,9 @@ pub(crate) fn quote_implied_vol(
         rate,
         div_yield: RND_DIV_YIELD,
     };
-    implied_vol(mid, &base, quote.right).ok().filter(|v| v.is_finite() && *v > 0.0)
+    implied_vol(mid, &base, quote.right)
+        .ok()
+        .filter(|v| v.is_finite() && *v > 0.0)
 }
 
 /// Determinant of a 3×3 matrix given row-major.
@@ -350,12 +352,21 @@ pub fn implied_rnd(
     let step_k = (max_strike - min_strike) / RND_MESH_DENSITY as f64;
     let d_k = RND_MIN_DK.max(RND_DK_SPOT_FRAC * spot);
     if min_strike - d_k <= 0.0 {
-        return Err(QuantError::Domain("RND: grid too narrow for second-difference stencil"));
+        return Err(QuantError::Domain(
+            "RND: grid too narrow for second-difference stencil",
+        ));
     }
 
     let call_price = |k: f64| -> Result<f64, QuantError> {
         price(
-            &BsInputs { spot, strike: k, t_years, vol: interp_iv(k), rate, div_yield: RND_DIV_YIELD },
+            &BsInputs {
+                spot,
+                strike: k,
+                t_years,
+                vol: interp_iv(k),
+                rate,
+                div_yield: RND_DIV_YIELD,
+            },
             OptionRight::Call,
         )
     };
@@ -393,7 +404,9 @@ pub fn implied_rnd(
     // Normalize to a unit-integral PDF.
     let total = trapz(&density, step_k);
     if !(total.is_finite() && total > 0.0) {
-        return Err(QuantError::Domain("RND: degenerate (non-positive) density integral"));
+        return Err(QuantError::Domain(
+            "RND: degenerate (non-positive) density integral",
+        ));
     }
     for d in &mut density {
         *d /= total;
@@ -411,8 +424,11 @@ pub fn implied_rnd(
     // Moments by trapezoidal integration of the PDF.
     let k_f: Vec<f64> = strikes.iter().zip(&density).map(|(k, f)| k * f).collect();
     let mean = trapz(&k_f, step_k);
-    let var_terms: Vec<f64> =
-        strikes.iter().zip(&density).map(|(k, f)| (k - mean) * (k - mean) * f).collect();
+    let var_terms: Vec<f64> = strikes
+        .iter()
+        .zip(&density)
+        .map(|(k, f)| (k - mean) * (k - mean) * f)
+        .collect();
     let variance = trapz(&var_terms, step_k).max(0.0);
     let std_dev = variance.sqrt();
     let (skewness, excess_kurtosis) = if std_dev > 0.0 {
@@ -426,7 +442,10 @@ pub fn implied_rnd(
             .zip(&density)
             .map(|(k, f)| ((k - mean) / std_dev).powi(4) * f)
             .collect();
-        (trapz(&sk, step_k), trapz(&ku, step_k) - EXCESS_KURTOSIS_OFFSET)
+        (
+            trapz(&sk, step_k),
+            trapz(&ku, step_k) - EXCESS_KURTOSIS_OFFSET,
+        )
     } else {
         (0.0, 0.0)
     };
@@ -447,7 +466,11 @@ pub fn implied_rnd(
         .iter()
         .zip(&density)
         .zip(&cdf)
-        .map(|((&strike, &density), &cdf)| RndPoint { strike, density, cdf })
+        .map(|((&strike, &density), &cdf)| RndPoint {
+            strike,
+            density,
+            cdf,
+        })
         .collect();
 
     Ok(RndCurve {
@@ -471,7 +494,11 @@ mod tests {
     use crate::dist::norm_cdf_inv;
     use slayer_core::ExpiryDate;
 
-    const EXPIRY: ExpiryDate = ExpiryDate { year: 2026, month: 8, day: 21 };
+    const EXPIRY: ExpiryDate = ExpiryDate {
+        year: 2026,
+        month: 8,
+        day: 21,
+    };
 
     /// Build a call chain whose mid prices are exact flat-vol BSM prices, so
     /// the recovered RND must be the closed-form lognormal. `iv` is left
@@ -487,7 +514,14 @@ mod tests {
             .iter()
             .map(|&k| {
                 let p = price(
-                    &BsInputs { spot, strike: k, t_years: t, vol: sigma, rate: r, div_yield: 0.0 },
+                    &BsInputs {
+                        spot,
+                        strike: k,
+                        t_years: t,
+                        vol: sigma,
+                        rate: r,
+                        div_yield: 0.0,
+                    },
                     OptionRight::Call,
                 )
                 .unwrap();
@@ -533,7 +567,11 @@ mod tests {
         let rnd = implied_rnd(&chain, 100.0, 45.0 / 365.0, 0.04).unwrap();
         let mut prev = -1.0;
         for pt in &rnd.points {
-            assert!(pt.cdf >= prev - 1e-12, "cdf not monotone at K={}", pt.strike);
+            assert!(
+                pt.cdf >= prev - 1e-12,
+                "cdf not monotone at K={}",
+                pt.strike
+            );
             assert!((0.0..=1.0 + 1e-9).contains(&pt.cdf));
             assert!(pt.density >= 0.0, "negative density at K={}", pt.strike);
             prev = pt.cdf;
@@ -573,7 +611,11 @@ mod tests {
         }
         // Mean should match the risk-neutral forward S·e^{rT}.
         let fwd = spot * (r * t).exp();
-        assert!((rnd.mean - fwd).abs() < 0.02 * spot, "mean {} vs fwd {fwd}", rnd.mean);
+        assert!(
+            (rnd.mean - fwd).abs() < 0.02 * spot,
+            "mean {} vs fwd {fwd}",
+            rnd.mean
+        );
     }
 
     #[test]
@@ -602,7 +644,10 @@ mod tests {
         let chain = lognormal_call_chain(100.0, 0.20, 30.0 / 365.0, 0.03, &ks);
         assert!(matches!(
             implied_rnd(&chain, 100.0, 30.0 / 365.0, 0.03),
-            Err(QuantError::InsufficientData { needed: RND_MIN_CHAIN_SIZE, got: 3 })
+            Err(QuantError::InsufficientData {
+                needed: RND_MIN_CHAIN_SIZE,
+                got: 3
+            })
         ));
     }
 

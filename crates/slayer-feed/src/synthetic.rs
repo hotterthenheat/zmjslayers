@@ -190,7 +190,9 @@ impl SymState {
         // only, colliding SPY/SPX/SMH).
         let mut seed = master_seed;
         for b in params.symbol.as_str().bytes() {
-            seed = seed.wrapping_mul(0x0100_0000_01b3).wrapping_add(u64::from(b));
+            seed = seed
+                .wrapping_mul(0x0100_0000_01b3)
+                .wrapping_add(u64::from(b));
         }
         let spot = params.spot;
         let vol = params.vol;
@@ -227,7 +229,8 @@ impl SymState {
         // Vol regime wanders once per bar (its own √(bar-dt) scale).
         let bar_dt = 1.0 / MINUTES_PER_YEAR;
         let vz: f64 = sample_normal(&mut self.rng);
-        self.vol = (self.vol + VOL_OF_VOL * bar_dt.sqrt() * vz * self.vol
+        self.vol = (self.vol
+            + VOL_OF_VOL * bar_dt.sqrt() * vz * self.vol
             + VOL_MEAN_REVERT * (self.params.vol - self.vol) * bar_dt.sqrt())
         .clamp(VOL_BOUNDS.0, VOL_BOUNDS.1);
         self.bar_volume += 1_000.0 * (1.0 + path_abs_z / INTRA_STEPS_PER_BAR as f64);
@@ -305,7 +308,11 @@ impl SymState {
                 quotes.push(OptionQuote {
                     strike,
                     right,
-                    expiry: ExpiryDate { year: 2026, month: 12, day: 18 },
+                    expiry: ExpiryDate {
+                        year: 2026,
+                        month: 12,
+                        day: 18,
+                    },
                     bid: Some((theo - half_spread).max(MIN_BID)),
                     ask: Some(theo + half_spread),
                     volume: volume as u64,
@@ -342,8 +349,10 @@ async fn run_simulation(
     symbols: Vec<SyntheticSymbol>,
     tx: mpsc::Sender<MarketEvent>,
 ) {
-    let mut states: Vec<SymState> =
-        symbols.into_iter().map(|s| SymState::new(s, config.seed)).collect();
+    let mut states: Vec<SymState> = symbols
+        .into_iter()
+        .map(|s| SymState::new(s, config.seed))
+        .collect();
     let mut sim_ts = config.start_ts;
 
     // Warmup burst: emit history so indicator warmup is instant.

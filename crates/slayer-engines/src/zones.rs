@@ -72,8 +72,10 @@ const WALL_ACTIVATE_AT_SCORE: f64 = 0.0;
 /// (`docs/ARCHITECTURE.md` §2). Cold-start resolution is exactly `ACTIVE ⟺ m ≥ 0`.
 const WALL_DEACTIVATE_HYSTERESIS: f64 = 0.1;
 /// Hysteresis band resolving the wall zone-state score into a [`BinaryState`].
-const WALL_ZONE_BAND: HysteresisBand =
-    HysteresisBand::new(WALL_ACTIVATE_AT_SCORE, WALL_ACTIVATE_AT_SCORE - WALL_DEACTIVATE_HYSTERESIS);
+const WALL_ZONE_BAND: HysteresisBand = HysteresisBand::new(
+    WALL_ACTIVATE_AT_SCORE,
+    WALL_ACTIVATE_AT_SCORE - WALL_DEACTIVATE_HYSTERESIS,
+);
 
 /// Which side of the book a strike sits on relative to spot. Descriptive DATA.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -311,7 +313,12 @@ fn empty_gravity(spot: f64) -> StrikeGravity {
         support_wall: None,
         resistance_wall: None,
         cluster_score: 0.0,
-        weights: GravityWeights { gex: 0.0, oi: 0.0, volume: 0.0, proximity: 0.0 },
+        weights: GravityWeights {
+            gex: 0.0,
+            oi: 0.0,
+            volume: 0.0,
+            proximity: 0.0,
+        },
     }
 }
 
@@ -326,8 +333,14 @@ fn build_zones(mut rows: Vec<GravityStrike>, spot: f64, zone_gap: f64) -> Vec<Gr
             j += 1;
         }
         let cluster = &rows[i..=j];
-        let lo = cluster.iter().map(|s| s.strike).fold(f64::INFINITY, f64::min);
-        let hi = cluster.iter().map(|s| s.strike).fold(f64::NEG_INFINITY, f64::max);
+        let lo = cluster
+            .iter()
+            .map(|s| s.strike)
+            .fold(f64::INFINITY, f64::min);
+        let hi = cluster
+            .iter()
+            .map(|s| s.strike)
+            .fold(f64::NEG_INFINITY, f64::max);
         let net_gex = cluster.iter().map(|s| s.net_gex).sum();
         let gravity = cluster.iter().map(|s| s.gravity_score).sum();
         let side = if hi < spot {
@@ -337,7 +350,13 @@ fn build_zones(mut rows: Vec<GravityStrike>, spot: f64, zone_gap: f64) -> Vec<Gr
         } else {
             ZoneSide::Straddle
         };
-        zones.push(GravityZone { lo, hi, net_gex, gravity, side });
+        zones.push(GravityZone {
+            lo,
+            hi,
+            net_gex,
+            gravity,
+            side,
+        });
         i = j + 1;
     }
     zones
@@ -347,8 +366,11 @@ fn build_zones(mut rows: Vec<GravityStrike>, spot: f64, zone_gap: f64) -> Vec<Gr
 fn estimate_step(scored: &[GravityStrike], spot: f64) -> f64 {
     let mut sorted: Vec<f64> = scored.iter().map(|s| s.strike).collect();
     sorted.sort_by(|a, b| cmp_f64(*a, *b));
-    let mut gaps: Vec<f64> =
-        sorted.windows(2).map(|w| w[1] - w[0]).filter(|d| *d > 0.0).collect();
+    let mut gaps: Vec<f64> = sorted
+        .windows(2)
+        .map(|w| w[1] - w[0])
+        .filter(|d| *d > 0.0)
+        .collect();
     if gaps.is_empty() {
         return spot * STRIKE_STEP_FALLBACK_PCT;
     }
@@ -422,7 +444,11 @@ pub fn strike_gravity(
     let mut scored: Vec<GravityStrike> = kept
         .iter()
         .map(|k| {
-            let gex_weight = if has_gex { k.abs_gex / max_abs_gex } else { 0.0 };
+            let gex_weight = if has_gex {
+                k.abs_gex / max_abs_gex
+            } else {
+                0.0
+            };
             let oi_weight = if has_oi { k.oi / max_oi } else { 0.0 };
             let volume_weight = if has_vol { k.volume / max_vol } else { 0.0 };
             let distance_pct = (k.strike - spot) / spot;
@@ -479,7 +505,11 @@ pub fn strike_gravity(
         .max_by(|a, b| cmp_f64(a.gravity, b.gravity));
 
     let total_ranked: f64 = ranked.iter().map(|s| s.gravity_score).sum();
-    let denom = if total_ranked > 0.0 { total_ranked } else { TOTAL_GRAVITY_FLOOR };
+    let denom = if total_ranked > 0.0 {
+        total_ranked
+    } else {
+        TOTAL_GRAVITY_FLOOR
+    };
     let cluster_score = zones.first().map_or(0.0, |z| (z.gravity / denom).min(1.0));
 
     StrikeGravity {
@@ -492,7 +522,12 @@ pub fn strike_gravity(
         support_wall,
         resistance_wall,
         cluster_score,
-        weights: GravityWeights { gex: w_gex, oi: w_oi, volume: w_vol, proximity: w_prox },
+        weights: GravityWeights {
+            gex: w_gex,
+            oi: w_oi,
+            volume: w_vol,
+            proximity: w_prox,
+        },
     }
 }
 
@@ -516,7 +551,13 @@ pub fn wall_zone(
     };
     let score = margin / WALL_TESTING_BAND_PCT;
     let readout = Readout::resolve_from(&WALL_ZONE_BAND, score, previous);
-    WallZone { kind, strike, margin, readout, strength_0_100: fin(strength_0_100).clamp(0.0, 100.0) }
+    WallZone {
+        kind,
+        strike,
+        margin,
+        readout,
+        strength_0_100: fin(strength_0_100).clamp(0.0, 100.0),
+    }
 }
 
 /// Assemble the full dealer zone structure (E5 gravity + both E10 wall states).
@@ -537,7 +578,11 @@ pub fn zone_structure(input: &ZoneInput) -> ZoneStructure {
         input.put_wall.strength_0_100,
         input.put_wall.previous_state,
     );
-    ZoneStructure { gravity, call_wall, put_wall }
+    ZoneStructure {
+        gravity,
+        call_wall,
+        put_wall,
+    }
 }
 
 #[cfg(test)]
@@ -615,7 +660,13 @@ mod tests {
     fn strength_is_clamped_and_finite() {
         let w = wall_zone(WallKind::Call, 100.0, 105.0, 250.0, BinaryState::Inactive);
         assert!((w.strength_0_100 - 100.0).abs() < 1e-12);
-        let n = wall_zone(WallKind::Call, 100.0, 105.0, f64::NAN, BinaryState::Inactive);
+        let n = wall_zone(
+            WallKind::Call,
+            100.0,
+            105.0,
+            f64::NAN,
+            BinaryState::Inactive,
+        );
         assert!((n.strength_0_100).abs() < 1e-12);
     }
 
@@ -651,7 +702,13 @@ mod tests {
             strike(105.0, 0.0, 100.0, 0.0),
         ];
         let g = strike_gravity(&chain, 100.0, &GravityConfig::default());
-        let side_of = |k: f64| g.strikes.iter().find(|s| (s.strike - k).abs() < 1e-9).unwrap().side;
+        let side_of = |k: f64| {
+            g.strikes
+                .iter()
+                .find(|s| (s.strike - k).abs() < 1e-9)
+                .unwrap()
+                .side
+        };
         assert_eq!(side_of(95.0), GravitySide::Support);
         assert_eq!(side_of(100.0), GravitySide::Atm);
         assert_eq!(side_of(105.0), GravitySide::Resistance);

@@ -35,7 +35,11 @@ impl Metric {
     /// Construct a metric.
     #[must_use]
     pub fn new(label: impl Into<String>, value: f64, unit: impl Into<String>) -> Self {
-        Self { label: label.into(), value, unit: unit.into() }
+        Self {
+            label: label.into(),
+            value,
+            unit: unit.into(),
+        }
     }
 }
 
@@ -263,18 +267,27 @@ mod tests {
                 dsi: 0.0,
                 dealer01: 0.5,
                 gamma_flip: None,
-                gamma_flip_state: Readout { state: BinaryState::Inactive, score: 0.0 },
+                gamma_flip_state: Readout {
+                    state: BinaryState::Inactive,
+                    score: 0.0,
+                },
                 call_wall: WallReadout {
                     strike: None,
                     margin: 0.0,
                     strength: 0.0,
-                    state: Readout { state: BinaryState::Inactive, score: 0.0 },
+                    state: Readout {
+                        state: BinaryState::Inactive,
+                        score: 0.0,
+                    },
                 },
                 put_wall: WallReadout {
                     strike: None,
                     margin: 0.0,
                     strength: 0.0,
-                    state: Readout { state: BinaryState::Inactive, score: 0.0 },
+                    state: Readout {
+                        state: BinaryState::Inactive,
+                        score: 0.0,
+                    },
                 },
                 expected_move_pct: 0.0,
                 magnet: None,
@@ -285,7 +298,10 @@ mod tests {
                 long_score: 50.0,
                 short_score: 50.0,
                 direction: 0,
-                engagement: Readout { state: BinaryState::Inactive, score: 0.5 },
+                engagement: Readout {
+                    state: BinaryState::Inactive,
+                    score: 0.5,
+                },
                 sub_scores: vec![],
             },
             regime: RegimePanel {
@@ -293,9 +309,18 @@ mod tests {
                 half_life_bars: None,
                 label: "MEAN_REVERSION".into(),
                 probabilities: vec![],
-                confidence: Readout { state: BinaryState::Inactive, score: 0.33 },
-                compression: Readout { state: BinaryState::Inactive, score: 0.0 },
-                expansion: Readout { state: BinaryState::Inactive, score: 0.0 },
+                confidence: Readout {
+                    state: BinaryState::Inactive,
+                    score: 0.33,
+                },
+                compression: Readout {
+                    state: BinaryState::Inactive,
+                    score: 0.0,
+                },
+                expansion: Readout {
+                    state: BinaryState::Inactive,
+                    score: 0.0,
+                },
                 term_structure_slope: 0.0,
             },
             vol: VolPanel {
@@ -310,8 +335,14 @@ mod tests {
                 vanna_flow: 0.0,
                 charm_bias: 0.0,
                 migration: 0.0,
-                gamma_dynamics: Readout { state: BinaryState::Inactive, score: 0.0 },
-                oi_flow: Readout { state: BinaryState::Inactive, score: 0.0 },
+                gamma_dynamics: Readout {
+                    state: BinaryState::Inactive,
+                    score: 0.0,
+                },
+                oi_flow: Readout {
+                    state: BinaryState::Inactive,
+                    score: 0.0,
+                },
             },
             engines: vec![EngineStatus {
                 engine: "GEX".into(),
@@ -336,7 +367,14 @@ mod tests {
 
     #[test]
     fn wireframe_variants_tag_correctly() {
-        let hello = WireFrame::Hello { wire_version: WIRE_VERSION, feed: "synthetic".into() };
-        assert!(serde_json::to_string(&hello).unwrap().contains(r#""type":"HELLO""#));
+        let hello = WireFrame::Hello {
+            wire_version: WIRE_VERSION,
+            feed: "synthetic".into(),
+        };
+        assert!(
+            serde_json::to_string(&hello)
+                .unwrap()
+                .contains(r#""type":"HELLO""#)
+        );
     }
 }

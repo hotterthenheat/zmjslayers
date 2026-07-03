@@ -32,7 +32,10 @@ const MIN_BARS_RETURNS: usize = 3;
 
 fn validate(candles: &[Candle], min: usize) -> Result<(), QuantError> {
     if candles.len() < min {
-        return Err(QuantError::InsufficientData { needed: min, got: candles.len() });
+        return Err(QuantError::InsufficientData {
+            needed: min,
+            got: candles.len(),
+        });
     }
     let sane = candles.iter().all(|c| {
         c.open > 0.0
@@ -41,9 +44,15 @@ fn validate(candles: &[Candle], min: usize) -> Result<(), QuantError> {
             && c.high >= c.low
             && c.high >= c.open.max(c.close)
             && c.low <= c.open.min(c.close)
-            && [c.open, c.high, c.low, c.close].iter().all(|v| v.is_finite())
+            && [c.open, c.high, c.low, c.close]
+                .iter()
+                .all(|v| v.is_finite())
     });
-    if sane { Ok(()) } else { Err(QuantError::Domain("candle OHLC out of domain")) }
+    if sane {
+        Ok(())
+    } else {
+        Err(QuantError::Domain("candle OHLC out of domain"))
+    }
 }
 
 fn sample_variance(xs: &[f64]) -> f64 {
@@ -56,8 +65,10 @@ fn sample_variance(xs: &[f64]) -> f64 {
 /// returns. Needs ≥ 3 candles (two returns).
 pub fn close_to_close(candles: &[Candle], periods_per_year: f64) -> Result<f64, QuantError> {
     validate(candles, MIN_BARS_RETURNS)?;
-    let returns: Vec<f64> =
-        candles.windows(2).map(|w| (w[1].close / w[0].close).ln()).collect();
+    let returns: Vec<f64> = candles
+        .windows(2)
+        .map(|w| (w[1].close / w[0].close).ln())
+        .collect();
     Ok((sample_variance(&returns) * periods_per_year).sqrt())
 }
 
@@ -115,14 +126,18 @@ pub fn yang_zhang(candles: &[Candle], periods_per_year: f64) -> Result<f64, Quan
     validate(candles, MIN_BARS_RETURNS)?;
     let n = (candles.len() - 1) as f64;
 
-    let overnight: Vec<f64> =
-        candles.windows(2).map(|w| (w[1].open / w[0].close).ln()).collect();
-    let open_close: Vec<f64> = candles[1..].iter().map(|c| (c.close / c.open).ln()).collect();
+    let overnight: Vec<f64> = candles
+        .windows(2)
+        .map(|w| (w[1].open / w[0].close).ln())
+        .collect();
+    let open_close: Vec<f64> = candles[1..]
+        .iter()
+        .map(|c| (c.close / c.open).ln())
+        .collect();
     let rs_mean = candles[1..].iter().map(rs_term).sum::<f64>() / n;
 
     let k = YZ_ALPHA / (YZ_BETA + (n + 1.0) / (n - 1.0));
-    let var = sample_variance(&overnight) + k * sample_variance(&open_close)
-        + (1.0 - k) * rs_mean;
+    let var = sample_variance(&overnight) + k * sample_variance(&open_close) + (1.0 - k) * rs_mean;
     Ok(((periods_per_year * var).max(0.0)).sqrt())
 }
 
@@ -184,7 +199,10 @@ mod tests {
         // intra-bar steps), hence the asymmetric-but-loose tolerance.
         for (i, est) in estimates.iter().enumerate() {
             let rel = (est - true_vol).abs() / true_vol;
-            assert!(rel < 0.08, "estimator {i}: {est} vs {true_vol} (rel {rel:.3})");
+            assert!(
+                rel < 0.08,
+                "estimator {i}: {est} vs {true_vol} (rel {rel:.3})"
+            );
         }
     }
 
@@ -200,7 +218,13 @@ mod tests {
                 volume: 0.0,
             })
             .collect();
-        for f in [close_to_close, parkinson, garman_klass, rogers_satchell, yang_zhang] {
+        for f in [
+            close_to_close,
+            parkinson,
+            garman_klass,
+            rogers_satchell,
+            yang_zhang,
+        ] {
             assert_eq!(f(&flat, 252.0).unwrap(), 0.0);
         }
     }
@@ -219,8 +243,17 @@ mod tests {
     fn malformed_candles_rejected() {
         let mut candles = gbm_candles(0.2, 5, 2);
         candles[2].high = candles[2].low - 1.0;
-        for f in [close_to_close, parkinson, garman_klass, rogers_satchell, yang_zhang] {
-            assert_eq!(f(&candles, 252.0), Err(QuantError::Domain("candle OHLC out of domain")));
+        for f in [
+            close_to_close,
+            parkinson,
+            garman_klass,
+            rogers_satchell,
+            yang_zhang,
+        ] {
+            assert_eq!(
+                f(&candles, 252.0),
+                Err(QuantError::Domain("candle OHLC out of domain"))
+            );
         }
     }
 }

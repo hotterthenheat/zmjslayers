@@ -32,7 +32,11 @@ fn days_from_civil(y: i64, m: u32, d: u32) -> i64 {
 /// calendar day, approximated as the day boundary.
 #[must_use]
 pub fn years_to_expiry(now: TsMillis, expiry: ExpiryDate) -> f64 {
-    let expiry_days = days_from_civil(i64::from(expiry.year), u32::from(expiry.month), u32::from(expiry.day));
+    let expiry_days = days_from_civil(
+        i64::from(expiry.year),
+        u32::from(expiry.month),
+        u32::from(expiry.day),
+    );
     let expiry_ms = expiry_days * MS_PER_DAY;
     // now.0 is u64 epoch millis; expiry at day boundary.
     let delta_ms = expiry_ms - now.0 as i64;
@@ -56,14 +60,28 @@ mod tests {
     fn one_year_out_is_about_one() {
         // 2026-01-01 to 2027-01-01 = 365 days.
         let now = TsMillis(days_from_civil(2026, 1, 1) as u64 * MS_PER_DAY as u64);
-        let t = years_to_expiry(now, ExpiryDate { year: 2027, month: 1, day: 1 });
+        let t = years_to_expiry(
+            now,
+            ExpiryDate {
+                year: 2027,
+                month: 1,
+                day: 1,
+            },
+        );
         assert!((t - 1.0).abs() < 1e-9, "got {t}");
     }
 
     #[test]
     fn past_expiry_floors() {
         let now = TsMillis(days_from_civil(2027, 1, 1) as u64 * MS_PER_DAY as u64);
-        let t = years_to_expiry(now, ExpiryDate { year: 2026, month: 1, day: 1 });
+        let t = years_to_expiry(
+            now,
+            ExpiryDate {
+                year: 2026,
+                month: 1,
+                day: 1,
+            },
+        );
         assert_eq!(t, MIN_T_YEARS);
     }
 }

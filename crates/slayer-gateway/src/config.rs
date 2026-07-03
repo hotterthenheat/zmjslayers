@@ -59,8 +59,8 @@ impl GatewayConfig {
         let bind_raw = std::env::var("SLAYER_BIND").unwrap_or_else(|_| DEFAULT_BIND.to_owned());
         let bind: SocketAddr = bind_raw.parse().map_err(|_| ConfigError::Bind(bind_raw))?;
 
-        let universe_raw = std::env::var("SLAYER_UNIVERSE")
-            .unwrap_or_else(|_| DEFAULT_UNIVERSE.join(","));
+        let universe_raw =
+            std::env::var("SLAYER_UNIVERSE").unwrap_or_else(|_| DEFAULT_UNIVERSE.join(","));
         let universe = universe_raw
             .split(',')
             .filter(|s| !s.trim().is_empty())
@@ -75,7 +75,11 @@ impl GatewayConfig {
             Err(_) => DEFAULT_SEED,
         };
 
-        Ok(Self { bind, universe, feed: FeedKind::Synthetic { seed } })
+        Ok(Self {
+            bind,
+            universe,
+            feed: FeedKind::Synthetic { seed },
+        })
     }
 }
 

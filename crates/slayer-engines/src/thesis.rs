@@ -256,7 +256,11 @@ fn vwap_or_close(vwaps: &[Option<f64>], candles: &[Candle], i: usize) -> f64 {
 #[must_use]
 pub fn momentum01(mom_vel: f64, rsi_slope: f64) -> f64 {
     let divergent = sign_of(mom_vel) != sign_of(rsi_slope) && rsi_slope != 0.0;
-    let div_pen = if divergent { MOMENTUM_DIVERGENCE_PENALTY } else { 1.0 };
+    let div_pen = if divergent {
+        MOMENTUM_DIVERGENCE_PENALTY
+    } else {
+        1.0
+    };
     clamp01((mom_vel / MOMENTUM_TANH_SCALE).tanh() * div_pen)
 }
 
@@ -337,9 +341,16 @@ fn system_score(candles: &[Candle], dir: f64, atr_fallback: f64) -> SystemScore 
         let v2 = vwap_or_close(&vwaps, candles, n - 2);
         if dir > 0.0 { c2 <= v2 } else { c2 >= v2 }
     };
-    let crossed_back_now =
-        if dir > 0.0 { last.close > current_vwap } else { last.close < current_vwap };
-    let reclaim = if crossed_back_now && crossed_before { 1.0 } else { 0.0 };
+    let crossed_back_now = if dir > 0.0 {
+        last.close > current_vwap
+    } else {
+        last.close < current_vwap
+    };
+    let reclaim = if crossed_back_now && crossed_before {
+        1.0
+    } else {
+        0.0
+    };
     let vwap01_full = clamp01(
         VWAP_BLEND_KERNEL * vwap01_kernel
             + VWAP_BLEND_SLOPE * unit_from_signed(vwap_slope)
@@ -458,7 +469,14 @@ mod tests {
     const EPS: f64 = 1e-9;
 
     fn candle(h: f64, l: f64, c: f64, v: f64) -> Candle {
-        Candle { ts: TsMillis(0), open: c, high: h, low: l, close: c, volume: v }
+        Candle {
+            ts: TsMillis(0),
+            open: c,
+            high: h,
+            low: l,
+            close: c,
+            volume: v,
+        }
     }
 
     #[test]
@@ -518,7 +536,12 @@ mod tests {
             })
             .collect();
         let t = thesis(&candles, 1.0);
-        assert!(t.long_score > t.short_score, "long {} short {}", t.long_score, t.short_score);
+        assert!(
+            t.long_score > t.short_score,
+            "long {} short {}",
+            t.long_score,
+            t.short_score
+        );
         assert_eq!(t.direction, 1);
         // The dominant side is the long side; its total equals long_score.
         assert_eq!(t.dominant.total, t.long_score);
@@ -559,8 +582,14 @@ mod tests {
     fn previous_state_is_carried_through_the_band() {
         // A score strictly inside the band holds whatever state came before.
         let mid = 0.5 * (ENGAGEMENT_ACTIVATE + ENGAGEMENT_DEACTIVATE);
-        assert_eq!(ENGAGEMENT_BAND.resolve(mid, BinaryState::Active), BinaryState::Active);
-        assert_eq!(ENGAGEMENT_BAND.resolve(mid, BinaryState::Inactive), BinaryState::Inactive);
+        assert_eq!(
+            ENGAGEMENT_BAND.resolve(mid, BinaryState::Active),
+            BinaryState::Active
+        );
+        assert_eq!(
+            ENGAGEMENT_BAND.resolve(mid, BinaryState::Inactive),
+            BinaryState::Inactive
+        );
     }
 
     #[test]

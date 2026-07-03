@@ -34,8 +34,13 @@ impl Symbol {
         let s = raw.trim().to_ascii_uppercase();
         let valid = !s.is_empty()
             && s.len() <= 12
-            && s.chars().all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '/');
-        if valid { Ok(Self(s)) } else { Err(crate::CoreError::InvalidSymbol(raw.to_owned())) }
+            && s.chars()
+                .all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '/');
+        if valid {
+            Ok(Self(s))
+        } else {
+            Err(crate::CoreError::InvalidSymbol(raw.to_owned()))
+        }
     }
 
     /// The normalized ticker string.
@@ -220,7 +225,11 @@ mod tests {
         let q = |bid, ask| OptionQuote {
             strike: 100.0,
             right: OptionRight::Call,
-            expiry: ExpiryDate { year: 2026, month: 12, day: 18 },
+            expiry: ExpiryDate {
+                year: 2026,
+                month: 12,
+                day: 18,
+            },
             bid,
             ask,
             volume: 0,
@@ -235,7 +244,11 @@ mod tests {
 
     #[test]
     fn expiry_displays_iso() {
-        let e = ExpiryDate { year: 2026, month: 7, day: 2 };
+        let e = ExpiryDate {
+            year: 2026,
+            month: 7,
+            day: 2,
+        };
         assert_eq!(e.to_string(), "2026-07-02");
     }
 }

@@ -14,11 +14,9 @@
 use crate::timecalc::years_to_expiry;
 use slayer_core::wire::{
     DealerPanel, EngineStatus, FlowPanel, Metric, RegimePanel, StrikeRow, TerminalSnapshot,
-    ThesisPanel, VolPanel, WallReadout, WIRE_VERSION,
+    ThesisPanel, VolPanel, WIRE_VERSION, WallReadout,
 };
-use slayer_core::{
-    BinaryState, ExpiryDate, OptionChain, OptionRight, Readout, Symbol, TsMillis,
-};
+use slayer_core::{BinaryState, ExpiryDate, OptionChain, OptionRight, Readout, Symbol, TsMillis};
 use slayer_engines::dealer::{self, DealerDynamicsInput, DealerPrevStates};
 use slayer_engines::gex::{self, GexParams, GexStructure, Wall};
 use slayer_engines::regime::{self, RegimeLabel};
@@ -129,7 +127,12 @@ impl PipelineState {
                 let t_years = expiry.map_or(1.0 / 365.0, |e| years_to_expiry(c.ts, e));
                 compose_chain(mem, c, spot, t_years)
             }
-            _ => (empty_dealer_panel(), empty_flow_panel(), VolExtra::default(), None),
+            _ => (
+                empty_dealer_panel(),
+                empty_flow_panel(),
+                VolExtra::default(),
+                None,
+            ),
         };
 
         // ── Volatility panel ──────────────────────────────────────────────
@@ -185,7 +188,12 @@ fn compose_chain(
 ) -> (DealerPanel, FlowPanel, VolExtra, Option<ExpiryDate>) {
     let params = GexParams::new(t_years, RATE, DIV_YIELD);
     let Ok(gexs) = gex::analyze(chain, &params) else {
-        return (empty_dealer_panel(), empty_flow_panel(), VolExtra::default(), None);
+        return (
+            empty_dealer_panel(),
+            empty_flow_panel(),
+            VolExtra::default(),
+            None,
+        );
     };
 
     // Dealer zones: build per-strike gravity inputs by joining the GEX
@@ -195,7 +203,10 @@ fn compose_chain(
         .profile
         .iter()
         .map(|r| {
-            let agg = oi_by_strike.get(&strike_key(r.strike)).copied().unwrap_or_default();
+            let agg = oi_by_strike
+                .get(&strike_key(r.strike))
+                .copied()
+                .unwrap_or_default();
             GravityStrikeInput {
                 strike: r.strike,
                 net_gex: r.gex,
@@ -226,9 +237,9 @@ fn compose_chain(
     // Dealer-flow dynamics from aggregate exposures + prior tick.
     let gex_com = gamma_center_of_mass(&gexs);
     let total_oi: f64 = oi_by_strike.values().map(|a| a.call_oi + a.put_oi).sum();
-    let dt_min = mem
-        .prev_ts
-        .map_or(1.0, |p| (chain.ts.saturating_since(p) as f64 / 60_000.0).max(1e-3));
+    let dt_min = mem.prev_ts.map_or(1.0, |p| {
+        (chain.ts.saturating_since(p) as f64 / 60_000.0).max(1e-3)
+    });
     let dyn_input = DealerDynamicsInput {
         spot,
         net_gex: gexs.net_gex,
@@ -411,7 +422,10 @@ fn map_wall(gex_wall: Option<&Wall>, zone: &zones::WallZone) -> WallReadout {
         state: if gex_wall.is_some() {
             zone.readout
         } else {
-            Readout { state: BinaryState::Inactive, score: 0.0 }
+            Readout {
+                state: BinaryState::Inactive,
+                score: 0.0,
+            }
         },
     }
 }
@@ -491,8 +505,16 @@ fn engine_board(
 /// exposures zero, walls/flip absent, states INACTIVE. Never fabricated —
 /// absence is represented honestly.
 fn empty_dealer_panel() -> DealerPanel {
-    let inactive = Readout { state: BinaryState::Inactive, score: 0.0 };
-    let wall = WallReadout { strike: None, margin: 0.0, strength: 0.0, state: inactive };
+    let inactive = Readout {
+        state: BinaryState::Inactive,
+        score: 0.0,
+    };
+    let wall = WallReadout {
+        strike: None,
+        margin: 0.0,
+        strength: 0.0,
+        state: inactive,
+    };
     DealerPanel {
         net_gex: 0.0,
         gross_gex: 0.0,
@@ -513,7 +535,10 @@ fn empty_dealer_panel() -> DealerPanel {
 }
 
 fn empty_flow_panel() -> FlowPanel {
-    let inactive = Readout { state: BinaryState::Inactive, score: 0.0 };
+    let inactive = Readout {
+        state: BinaryState::Inactive,
+        score: 0.0,
+    };
     FlowPanel {
         vanna_flow: 0.0,
         charm_bias: 0.0,

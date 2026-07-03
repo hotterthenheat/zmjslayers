@@ -46,10 +46,18 @@ struct PpfCase {
 fn norm_dist_matches_scipy_goldens() {
     let g: NormGolden = serde_json::from_str(&golden("norm_dist.json")).unwrap();
     for c in g.cdf {
-        assert!((dist::norm_cdf(c.x) - c.value).abs() < DIST_TOL, "cdf({})", c.x);
+        assert!(
+            (dist::norm_cdf(c.x) - c.value).abs() < DIST_TOL,
+            "cdf({})",
+            c.x
+        );
     }
     for c in g.ppf {
-        assert!((dist::norm_cdf_inv(c.p) - c.value).abs() < DIST_TOL, "ppf({})", c.p);
+        assert!(
+            (dist::norm_cdf_inv(c.p) - c.value).abs() < DIST_TOL,
+            "ppf({})",
+            c.p
+        );
     }
 }
 
@@ -91,7 +99,11 @@ fn black_scholes_matches_scipy_goldens() {
         };
         let tag = format!("K={} vol={} t={} {}", c.strike, c.vol, c.t_years, c.right);
         let p = black_scholes::price(&inputs, right).unwrap();
-        assert!((p - c.price).abs() < BS_TOL, "{tag} price {p} vs {}", c.price);
+        assert!(
+            (p - c.price).abs() < BS_TOL,
+            "{tag} price {p} vs {}",
+            c.price
+        );
         let g = black_scholes::greeks(&inputs, right).unwrap();
         for (got, want, name) in [
             (g.delta, c.delta, "delta"),
@@ -140,11 +152,31 @@ fn realized_vol_matches_scipy_goldens() {
         .collect();
     let p = g.periods_per_year;
     let cases = [
-        (realized_vol::close_to_close(&candles, p).unwrap(), g.estimates.close_to_close, "ctc"),
-        (realized_vol::parkinson(&candles, p).unwrap(), g.estimates.parkinson, "parkinson"),
-        (realized_vol::garman_klass(&candles, p).unwrap(), g.estimates.garman_klass, "gk"),
-        (realized_vol::rogers_satchell(&candles, p).unwrap(), g.estimates.rogers_satchell, "rs"),
-        (realized_vol::yang_zhang(&candles, p).unwrap(), g.estimates.yang_zhang, "yz"),
+        (
+            realized_vol::close_to_close(&candles, p).unwrap(),
+            g.estimates.close_to_close,
+            "ctc",
+        ),
+        (
+            realized_vol::parkinson(&candles, p).unwrap(),
+            g.estimates.parkinson,
+            "parkinson",
+        ),
+        (
+            realized_vol::garman_klass(&candles, p).unwrap(),
+            g.estimates.garman_klass,
+            "gk",
+        ),
+        (
+            realized_vol::rogers_satchell(&candles, p).unwrap(),
+            g.estimates.rogers_satchell,
+            "rs",
+        ),
+        (
+            realized_vol::yang_zhang(&candles, p).unwrap(),
+            g.estimates.yang_zhang,
+            "yz",
+        ),
     ];
     for (got, want, name) in cases {
         assert!((got - want).abs() < RV_TOL, "{name}: {got} vs {want}");

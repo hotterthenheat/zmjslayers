@@ -93,7 +93,10 @@ impl MarketBook {
             MarketEvent::Candle { symbol, candle, .. } => (symbol.clone(), candle.ts),
             MarketEvent::Spot(s) => (s.symbol.clone(), s.ts),
         };
-        let book = self.books.entry(symbol.clone()).or_insert_with(SymbolBook::new);
+        let book = self
+            .books
+            .entry(symbol.clone())
+            .or_insert_with(SymbolBook::new);
         book.last_event_ts = book.last_event_ts.max(ts);
         match event {
             MarketEvent::Chain(chain) => book.chain = Some(chain),
@@ -127,7 +130,14 @@ mod tests {
     }
 
     fn candle(ts: u64, close: f64) -> Candle {
-        Candle { ts: TsMillis(ts), open: close, high: close, low: close, close, volume: 1.0 }
+        Candle {
+            ts: TsMillis(ts),
+            open: close,
+            high: close,
+            low: close,
+            close,
+            volume: 1.0,
+        }
     }
 
     #[test]
@@ -172,7 +182,11 @@ mod tests {
             candle: candle(1000, 42.0),
         });
         assert_eq!(book.get(&s).unwrap().effective_spot(), Some(42.0));
-        book.apply(MarketEvent::Spot(SpotQuote { symbol: s.clone(), price: 43.0, ts: TsMillis(2000) }));
+        book.apply(MarketEvent::Spot(SpotQuote {
+            symbol: s.clone(),
+            price: 43.0,
+            ts: TsMillis(2000),
+        }));
         assert_eq!(book.get(&s).unwrap().effective_spot(), Some(43.0));
     }
 }

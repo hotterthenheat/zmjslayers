@@ -166,7 +166,15 @@ fn cone_step(step: usize, t_years: f64, values: &[f64]) -> GbmConeStep {
     let mut sorted = values.to_vec();
     sorted.sort_by(f64::total_cmp);
     let q = PERCENTILE_LEVELS.map(|p| quantile_sorted(&sorted, p));
-    GbmConeStep { step, t_years, p05: q[0], p25: q[1], p50: q[2], p75: q[3], p95: q[4] }
+    GbmConeStep {
+        step,
+        t_years,
+        p05: q[0],
+        p25: q[1],
+        p50: q[2],
+        p75: q[3],
+        p95: q[4],
+    }
 }
 
 /// Simulate GBM price paths and summarize them.
@@ -180,10 +188,14 @@ pub fn simulate_gbm(cfg: &GbmConfig) -> Result<GbmSimulation, QuantError> {
         return Err(QuantError::Domain("MC: spot must be finite and positive"));
     }
     if !(cfg.drift.is_finite() && cfg.vol.is_finite() && cfg.vol >= 0.0) {
-        return Err(QuantError::Domain("MC: drift/vol must be finite, vol non-negative"));
+        return Err(QuantError::Domain(
+            "MC: drift/vol must be finite, vol non-negative",
+        ));
     }
     if !(cfg.horizon_years.is_finite() && cfg.horizon_years > 0.0) {
-        return Err(QuantError::Domain("MC: horizon must be finite and positive"));
+        return Err(QuantError::Domain(
+            "MC: horizon must be finite and positive",
+        ));
     }
 
     let n_steps = cfg.n_steps.clamp(MC_MIN_STEPS, MC_MAX_STEPS);
@@ -279,10 +291,14 @@ mod tests {
     #[test]
     fn terminal_mean_matches_analytic() {
         let sim = simulate_gbm(&base(40_000, true)).unwrap();
-        let rel = (sim.terminal.mean - sim.terminal.analytic_mean).abs()
-            / sim.terminal.analytic_mean;
-        assert!(rel < 0.01, "mean {} vs analytic {} (rel {rel:.4})",
-            sim.terminal.mean, sim.terminal.analytic_mean);
+        let rel =
+            (sim.terminal.mean - sim.terminal.analytic_mean).abs() / sim.terminal.analytic_mean;
+        assert!(
+            rel < 0.01,
+            "mean {} vs analytic {} (rel {rel:.4})",
+            sim.terminal.mean,
+            sim.terminal.analytic_mean
+        );
         assert!((sim.terminal.analytic_mean - 100.0 * 0.05_f64.exp()).abs() < 1e-9);
     }
 
@@ -340,10 +356,10 @@ mod tests {
             drift: 0.0,
             vol: 0.3,
             horizon_years: 0.5,
-            n_steps: 0,          // clamped up to 1
-            n_paths: 0,          // clamped up to 1
+            n_steps: 0, // clamped up to 1
+            n_paths: 0, // clamped up to 1
             seed: 7,
-            sample_paths: 999,   // clamped down to n_paths
+            sample_paths: 999, // clamped down to n_paths
             antithetic: false,
         };
         let sim = simulate_gbm(&cfg).unwrap();

@@ -287,7 +287,11 @@ pub fn hurst_exponent(series: &[f64]) -> f64 {
 /// has no well-defined smooth half-life — fixes legacy D15).
 #[must_use]
 pub fn ou_half_life(series: &[f64]) -> Option<f64> {
-    let px: Vec<f64> = series.iter().copied().filter(|v| *v > 0.0 && v.is_finite()).collect();
+    let px: Vec<f64> = series
+        .iter()
+        .copied()
+        .filter(|v| *v > 0.0 && v.is_finite())
+        .collect();
     let len = px.len();
     if len < OU_MIN_POINTS {
         return None;
@@ -359,7 +363,11 @@ pub fn classify_regime(candles: &[Candle]) -> RegimeClassification {
             if full > 0.0 { full } else { VOL_RATIO_NEUTRAL }
         }
     };
-    let vol_ratio = if baseline > 0.0 { vol / baseline } else { VOL_RATIO_NEUTRAL };
+    let vol_ratio = if baseline > 0.0 {
+        vol / baseline
+    } else {
+        VOL_RATIO_NEUTRAL
+    };
 
     let trend_e = ((hurst - HURST_RANDOM_WALK) * REGIME_HURST_GAIN).max(0.0)
         + ((vol_ratio - VOL_RATIO_NEUTRAL) * REGIME_TREND_VOL_GAIN).max(0.0);
@@ -536,7 +544,10 @@ fn percentile_rank(series: &[f64], window: usize) -> f64 {
 /// Realized-vol term-structure slope `rvNear / rvFar − 1`, or 0 when either
 /// window has insufficient data or zero far-term vol.
 fn rv_term_structure_slope(candles: &[Candle]) -> f64 {
-    match (tail_c2c(candles, RV_NEAR_WINDOW), tail_c2c(candles, RV_FAR_WINDOW)) {
+    match (
+        tail_c2c(candles, RV_NEAR_WINDOW),
+        tail_c2c(candles, RV_FAR_WINDOW),
+    ) {
         (Some(near), Some(far)) if far > 0.0 => near / far - 1.0,
         _ => 0.0,
     }
@@ -678,7 +689,12 @@ mod tests {
 
         let candles = candles_from_closes(&closes);
         let cls = classify_regime(&candles);
-        assert_eq!(cls.label, RegimeLabel::TrendExpansion, "posteriors {:?}", cls.probabilities);
+        assert_eq!(
+            cls.label,
+            RegimeLabel::TrendExpansion,
+            "posteriors {:?}",
+            cls.probabilities
+        );
 
         let state = analyze_regime(&candles);
         assert_eq!(state.persistence.state, BinaryState::Active);
@@ -695,7 +711,12 @@ mod tests {
 
         let candles = candles_from_closes(&closes);
         let cls = classify_regime(&candles);
-        assert_eq!(cls.label, RegimeLabel::MeanReversion, "posteriors {:?}", cls.probabilities);
+        assert_eq!(
+            cls.label,
+            RegimeLabel::MeanReversion,
+            "posteriors {:?}",
+            cls.probabilities
+        );
     }
 
     #[test]
@@ -703,7 +724,10 @@ mod tests {
         let closes = random_walk_closes(600, 3);
         assert!(ou_half_life(&closes).is_none());
         let h = hurst_exponent(&closes);
-        assert!((h - 0.5).abs() < 0.15, "random walk H should be near 0.5, got {h}");
+        assert!(
+            (h - 0.5).abs() < 0.15,
+            "random walk H should be near 0.5, got {h}"
+        );
     }
 
     #[test]
@@ -753,7 +777,10 @@ mod tests {
         assert_eq!(back.half_life_bars.is_some(), a.half_life_bars.is_some());
         assert!((back.hurst - a.hurst).abs() < 1e-9);
         assert!((back.term_structure_slope - a.term_structure_slope).abs() < 1e-9);
-        let (pb, pa) = (back.classification.probabilities, a.classification.probabilities);
+        let (pb, pa) = (
+            back.classification.probabilities,
+            a.classification.probabilities,
+        );
         assert!((pb.trend_expansion - pa.trend_expansion).abs() < 1e-9);
         assert!((pb.mean_reversion - pa.mean_reversion).abs() < 1e-9);
         assert!((pb.tail_risk - pa.tail_risk).abs() < 1e-9);
@@ -822,6 +849,9 @@ mod tests {
             serde_json::to_string(&RegimeLabel::TrendExpansion).unwrap(),
             "\"TREND_EXPANSION\""
         );
-        assert_eq!(serde_json::to_string(&RegimeLabel::TailRisk).unwrap(), "\"TAIL_RISK\"");
+        assert_eq!(
+            serde_json::to_string(&RegimeLabel::TailRisk).unwrap(),
+            "\"TAIL_RISK\""
+        );
     }
 }

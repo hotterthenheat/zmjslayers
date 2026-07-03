@@ -40,10 +40,21 @@ impl BsInputs {
             && self.strike > 0.0
             && self.t_years >= 0.0
             && self.vol >= 0.0
-            && [self.spot, self.strike, self.t_years, self.vol, self.rate, self.div_yield]
-                .iter()
-                .all(|v| v.is_finite());
-        if ok { Ok(()) } else { Err(QuantError::Domain("BsInputs out of domain")) }
+            && [
+                self.spot,
+                self.strike,
+                self.t_years,
+                self.vol,
+                self.rate,
+                self.div_yield,
+            ]
+            .iter()
+            .all(|v| v.is_finite());
+        if ok {
+            Ok(())
+        } else {
+            Err(QuantError::Domain("BsInputs out of domain"))
+        }
     }
 
     fn d1_d2(&self) -> (f64, f64) {
@@ -120,7 +131,14 @@ pub fn greeks(inputs: &BsInputs, right: OptionRight) -> Result<BsGreeks, QuantEr
             OptionRight::Put => -1.0,
         };
         let delta = if itm { sign * disc_q } else { 0.0 };
-        return Ok(BsGreeks { delta, gamma: 0.0, theta: 0.0, vega: 0.0, vanna: 0.0, charm: 0.0 });
+        return Ok(BsGreeks {
+            delta,
+            gamma: 0.0,
+            theta: 0.0,
+            vega: 0.0,
+            vanna: 0.0,
+            charm: 0.0,
+        });
     }
 
     let (d1, d2) = inputs.d1_d2();
@@ -161,7 +179,14 @@ pub fn greeks(inputs: &BsInputs, right: OptionRight) -> Result<BsGreeks, QuantEr
         OptionRight::Put => disc_q * (-inputs.div_yield * norm_cdf(-d1) - drift_term),
     };
 
-    Ok(BsGreeks { delta, gamma, theta, vega, vanna, charm })
+    Ok(BsGreeks {
+        delta,
+        gamma,
+        theta,
+        vega,
+        vanna,
+        charm,
+    })
 }
 
 /// Max Newton iterations before falling back to bisection.
@@ -191,16 +216,19 @@ pub fn implied_vol(
         return Err(QuantError::Domain("implied vol undefined at expiry"));
     }
     if !market_price.is_finite() || market_price < 0.0 {
-        return Err(QuantError::Domain("market price must be finite and non-negative"));
+        return Err(QuantError::Domain(
+            "market price must be finite and non-negative",
+        ));
     }
-    let price_at = |vol: f64| -> Result<f64, QuantError> {
-        price(&BsInputs { vol, ..base }, right)
-    };
+    let price_at =
+        |vol: f64| -> Result<f64, QuantError> { price(&BsInputs { vol, ..base }, right) };
     // No-arbitrage bracket check.
     let lo_p = price_at(IV_LO)?;
     let hi_p = price_at(IV_HI)?;
     if market_price < lo_p - IV_PRICE_TOL || market_price > hi_p + IV_PRICE_TOL {
-        return Err(QuantError::NoSolution("price outside no-arbitrage vol bracket"));
+        return Err(QuantError::NoSolution(
+            "price outside no-arbitrage vol bracket",
+        ));
     }
 
     // Brenner–Subrahmanyam seed: σ ≈ √(2π/T) · P / S, clamped into bracket.
@@ -247,8 +275,14 @@ pub fn implied_vol(
 mod tests {
     use super::*;
 
-    const ATM: BsInputs =
-        BsInputs { spot: 100.0, strike: 100.0, t_years: 1.0, vol: 0.2, rate: 0.05, div_yield: 0.0 };
+    const ATM: BsInputs = BsInputs {
+        spot: 100.0,
+        strike: 100.0,
+        t_years: 1.0,
+        vol: 0.2,
+        rate: 0.05,
+        div_yield: 0.0,
+    };
 
     #[test]
     fn call_and_put_match_scipy_oracle() {
@@ -260,7 +294,12 @@ mod tests {
 
     #[test]
     fn put_call_parity_holds_off_atm() {
-        let inputs = BsInputs { strike: 87.5, vol: 0.34, div_yield: 0.012, ..ATM };
+        let inputs = BsInputs {
+            strike: 87.5,
+            vol: 0.34,
+            div_yield: 0.012,
+            ..ATM
+        };
         let c = price(&inputs, OptionRight::Call).unwrap();
         let p = price(&inputs, OptionRight::Put).unwrap();
         let parity = inputs.spot * (-inputs.div_yield * inputs.t_years).exp()
@@ -284,28 +323,87 @@ mod tests {
         let bump_t = 1e-7;
         for right in [OptionRight::Call, OptionRight::Put] {
             let g = greeks(&ATM, right).unwrap();
-            let up = price(&BsInputs { spot: ATM.spot + bump_s, ..ATM }, right).unwrap();
-            let dn = price(&BsInputs { spot: ATM.spot - bump_s, ..ATM }, right).unwrap();
+            let up = price(
+                &BsInputs {
+                    spot: ATM.spot + bump_s,
+                    ..ATM
+                },
+                right,
+            )
+            .unwrap();
+            let dn = price(
+                &BsInputs {
+                    spot: ATM.spot - bump_s,
+                    ..ATM
+                },
+                right,
+            )
+            .unwrap();
             let mid = price(&ATM, right).unwrap();
             assert!((g.delta - (up - dn) / (2.0 * bump_s)).abs() < 1e-6);
             assert!((g.gamma - (up - 2.0 * mid + dn) / (bump_s * bump_s)).abs() < 1e-5);
 
-            let vu = price(&BsInputs { vol: ATM.vol + bump_v, ..ATM }, right).unwrap();
-            let vd = price(&BsInputs { vol: ATM.vol - bump_v, ..ATM }, right).unwrap();
+            let vu = price(
+                &BsInputs {
+                    vol: ATM.vol + bump_v,
+                    ..ATM
+                },
+                right,
+            )
+            .unwrap();
+            let vd = price(
+                &BsInputs {
+                    vol: ATM.vol - bump_v,
+                    ..ATM
+                },
+                right,
+            )
+            .unwrap();
             assert!((g.vega - (vu - vd) / (2.0 * bump_v)).abs() < 1e-5);
 
             // Theta: ∂V/∂t with t = time-to-expiry ⇒ price(T - dt) ≈ price(T) + θ·dt
-            let tu = price(&BsInputs { t_years: ATM.t_years - bump_t, ..ATM }, right).unwrap();
+            let tu = price(
+                &BsInputs {
+                    t_years: ATM.t_years - bump_t,
+                    ..ATM
+                },
+                right,
+            )
+            .unwrap();
             assert!((g.theta - (tu - mid) / bump_t).abs() < 1e-4);
 
             // Vanna: ∂delta/∂σ
-            let gu = greeks(&BsInputs { vol: ATM.vol + bump_v, ..ATM }, right).unwrap();
-            let gd = greeks(&BsInputs { vol: ATM.vol - bump_v, ..ATM }, right).unwrap();
+            let gu = greeks(
+                &BsInputs {
+                    vol: ATM.vol + bump_v,
+                    ..ATM
+                },
+                right,
+            )
+            .unwrap();
+            let gd = greeks(
+                &BsInputs {
+                    vol: ATM.vol - bump_v,
+                    ..ATM
+                },
+                right,
+            )
+            .unwrap();
             assert!((g.vanna - (gu.delta - gd.delta) / (2.0 * bump_v)).abs() < 1e-5);
 
             // Charm: ∂delta/∂t with t = time-to-expiry
-            let gt = greeks(&BsInputs { t_years: ATM.t_years - bump_t, ..ATM }, right).unwrap();
-            assert!((g.charm - (gt.delta - g.delta) / bump_t).abs() < 1e-4, "charm {right:?}");
+            let gt = greeks(
+                &BsInputs {
+                    t_years: ATM.t_years - bump_t,
+                    ..ATM
+                },
+                right,
+            )
+            .unwrap();
+            assert!(
+                (g.charm - (gt.delta - g.delta) / bump_t).abs() < 1e-4,
+                "charm {right:?}"
+            );
         }
     }
 
@@ -315,10 +413,14 @@ mod tests {
             for vol in [0.08, 0.2, 0.55, 1.4] {
                 for t in [0.02, 0.25, 1.0, 2.0] {
                     for right in [OptionRight::Call, OptionRight::Put] {
-                        let inputs = BsInputs { strike, vol, t_years: t, ..ATM };
+                        let inputs = BsInputs {
+                            strike,
+                            vol,
+                            t_years: t,
+                            ..ATM
+                        };
                         let p = price(&inputs, right).unwrap();
-                        let intrinsic =
-                            price(&BsInputs { vol: 0.0, ..inputs }, right).unwrap();
+                        let intrinsic = price(&BsInputs { vol: 0.0, ..inputs }, right).unwrap();
                         if p - intrinsic < 1e-6 {
                             // Negligible extrinsic value ⇒ vega ≈ 0 ⇒ IV is
                             // mathematically unidentifiable from price.
@@ -344,8 +446,14 @@ mod tests {
 
     #[test]
     fn expired_options_price_at_intrinsic() {
-        let expired = BsInputs { t_years: 0.0, ..ATM };
-        let itm = BsInputs { strike: 90.0, ..expired };
+        let expired = BsInputs {
+            t_years: 0.0,
+            ..ATM
+        };
+        let itm = BsInputs {
+            strike: 90.0,
+            ..expired
+        };
         assert_eq!(price(&itm, OptionRight::Call).unwrap(), 10.0);
         assert_eq!(price(&itm, OptionRight::Put).unwrap(), 0.0);
     }

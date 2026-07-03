@@ -266,7 +266,11 @@ pub fn session_vwap(candles: &[Candle]) -> Vec<Option<f64>> {
         let typical = (c.high + c.low + c.close) / TYPICAL_PRICE_DIVISOR;
         cum_pv += typical * c.volume;
         cum_v += c.volume;
-        out.push(if cum_v > 0.0 { Some(cum_pv / cum_v) } else { None });
+        out.push(if cum_v > 0.0 {
+            Some(cum_pv / cum_v)
+        } else {
+            None
+        });
     }
     out
 }
@@ -327,14 +331,22 @@ pub fn fractal_pivots(candles: &[Candle], half_window: usize) -> Vec<Pivot> {
         let weak_high = (i - l..=i + l).all(|k| candles[k].high <= hi);
         let strict_left_high = (i - l..i).all(|k| candles[k].high < hi);
         if weak_high && strict_left_high {
-            out.push(Pivot { index: i, price: hi, kind: PivotKind::High });
+            out.push(Pivot {
+                index: i,
+                price: hi,
+                kind: PivotKind::High,
+            });
         }
 
         let lo = candles[i].low;
         let weak_low = (i - l..=i + l).all(|k| candles[k].low >= lo);
         let strict_left_low = (i - l..i).all(|k| candles[k].low > lo);
         if weak_low && strict_left_low {
-            out.push(Pivot { index: i, price: lo, kind: PivotKind::Low });
+            out.push(Pivot {
+                index: i,
+                price: lo,
+                kind: PivotKind::Low,
+            });
         }
     }
     out
@@ -375,10 +387,16 @@ pub fn structure01(pivots: &[Pivot], atr: f64, dir: f64) -> f64 {
     let mut sorted = pivots.to_vec();
     sorted.sort_by_key(|p| p.index);
 
-    let highs: Vec<f64> =
-        sorted.iter().filter(|p| p.kind == PivotKind::High).map(|p| p.price).collect();
-    let lows: Vec<f64> =
-        sorted.iter().filter(|p| p.kind == PivotKind::Low).map(|p| p.price).collect();
+    let highs: Vec<f64> = sorted
+        .iter()
+        .filter(|p| p.kind == PivotKind::High)
+        .map(|p| p.price)
+        .collect();
+    let lows: Vec<f64> = sorted
+        .iter()
+        .filter(|p| p.kind == PivotKind::Low)
+        .map(|p| p.price)
+        .collect();
     if highs.len() < 2 || lows.len() < 2 {
         return STRUCT_NEUTRAL;
     }
@@ -440,7 +458,14 @@ mod tests {
     const EPS: f64 = 1e-9;
 
     fn candle(o: f64, h: f64, l: f64, c: f64, v: f64) -> Candle {
-        Candle { ts: TsMillis(0), open: o, high: h, low: l, close: c, volume: v }
+        Candle {
+            ts: TsMillis(0),
+            open: o,
+            high: h,
+            low: l,
+            close: c,
+            volume: v,
+        }
     }
 
     /// A flat OHLC bar at price `p` with the given range half-width and volume.
@@ -449,7 +474,9 @@ mod tests {
     }
 
     fn rising(n: usize) -> Vec<Candle> {
-        (0..n).map(|i| bar(100.0 + i as f64, 0.5, 1000.0 + i as f64)).collect()
+        (0..n)
+            .map(|i| bar(100.0 + i as f64, 0.5, 1000.0 + i as f64))
+            .collect()
     }
 
     #[test]
@@ -469,8 +496,9 @@ mod tests {
         let rsi_up = wilder_rsi(&up, WILDER_PERIOD_DEFAULT);
         assert!((rsi_up[19].unwrap() - 100.0).abs() < EPS);
 
-        let down: Vec<Candle> =
-            (0..20).map(|i| bar(200.0 - i as f64, 0.5, 1000.0)).collect();
+        let down: Vec<Candle> = (0..20)
+            .map(|i| bar(200.0 - i as f64, 0.5, 1000.0))
+            .collect();
         let rsi_dn = wilder_rsi(&down, WILDER_PERIOD_DEFAULT);
         assert!(rsi_dn[19].unwrap().abs() < EPS);
     }
@@ -478,7 +506,11 @@ mod tests {
     #[test]
     fn rsi_short_series_all_none() {
         let c = rising(WILDER_PERIOD_DEFAULT); // exactly period, one short of the seed
-        assert!(wilder_rsi(&c, WILDER_PERIOD_DEFAULT).iter().all(Option::is_none));
+        assert!(
+            wilder_rsi(&c, WILDER_PERIOD_DEFAULT)
+                .iter()
+                .all(Option::is_none)
+        );
         assert!(wilder_rsi(&rising(5), 0).iter().all(Option::is_none));
     }
 
@@ -525,7 +557,9 @@ mod tests {
 
     #[test]
     fn rvol_neutral_when_baseline_unusable_d14() {
-        let c: Vec<Candle> = (0..4).map(|i| bar(100.0, 0.5, [10.0, 10.0, 10.0, 30.0][i])).collect();
+        let c: Vec<Candle> = (0..4)
+            .map(|i| bar(100.0, 0.5, [10.0, 10.0, 10.0, 30.0][i]))
+            .collect();
         // idx 0 has no baseline => neutral, not raw volume.
         assert!((rvol(&c, 0, RVOL_BASELINE_BARS) - RVOL_NEUTRAL).abs() < EPS);
         // idx 3 baseline mean = 10 => rvol = 3.
@@ -539,11 +573,15 @@ mod tests {
     fn fractal_double_top_yields_one_pivot_d16() {
         // Highs: low ... TOP TOP ... low, with an exact double top.
         let highs = [1.0, 2.0, 5.0, 5.0, 2.0, 1.0, 0.5];
-        let c: Vec<Candle> =
-            highs.iter().map(|&h| candle(h, h, h - 3.0, h - 1.0, 100.0)).collect();
+        let c: Vec<Candle> = highs
+            .iter()
+            .map(|&h| candle(h, h, h - 3.0, h - 1.0, 100.0))
+            .collect();
         let pivots = fractal_pivots(&c, FRACTAL_HALF_WINDOW);
-        let tops: Vec<&Pivot> =
-            pivots.iter().filter(|p| p.kind == PivotKind::High).collect();
+        let tops: Vec<&Pivot> = pivots
+            .iter()
+            .filter(|p| p.kind == PivotKind::High)
+            .collect();
         assert_eq!(tops.len(), 1, "double top must produce exactly one pivot");
         assert_eq!(tops[0].index, 2, "leftmost bar of the plateau");
         assert!((tops[0].price - 5.0).abs() < EPS);
@@ -552,19 +590,26 @@ mod tests {
     #[test]
     fn fractal_strict_peak_detected_like_legacy() {
         let highs = [1.0, 2.0, 3.0, 9.0, 3.0, 2.0, 1.0];
-        let c: Vec<Candle> =
-            highs.iter().map(|&h| candle(h, h, h - 3.0, h - 1.0, 100.0)).collect();
+        let c: Vec<Candle> = highs
+            .iter()
+            .map(|&h| candle(h, h, h - 3.0, h - 1.0, 100.0))
+            .collect();
         let pivots = fractal_pivots(&c, FRACTAL_HALF_WINDOW);
-        let tops: Vec<&Pivot> =
-            pivots.iter().filter(|p| p.kind == PivotKind::High).collect();
+        let tops: Vec<&Pivot> = pivots
+            .iter()
+            .filter(|p| p.kind == PivotKind::High)
+            .collect();
         assert_eq!(tops.len(), 1);
         assert_eq!(tops[0].index, 3);
     }
 
     #[test]
     fn structure01_neutral_without_enough_pivots() {
-        let p =
-            [Pivot { index: 0, price: 10.0, kind: PivotKind::High }];
+        let p = [Pivot {
+            index: 0,
+            price: 10.0,
+            kind: PivotKind::High,
+        }];
         assert!((structure01(&p, 1.0, 1.0) - STRUCT_NEUTRAL).abs() < EPS);
     }
 
@@ -572,11 +617,31 @@ mod tests {
     fn structure01_bullish_higher_highs_and_lows() {
         // HH and HL, last pivot a low (pullback), shrinking last leg.
         let p = vec![
-            Pivot { index: 0, price: 10.0, kind: PivotKind::Low },
-            Pivot { index: 1, price: 20.0, kind: PivotKind::High },
-            Pivot { index: 2, price: 14.0, kind: PivotKind::Low },
-            Pivot { index: 3, price: 25.0, kind: PivotKind::High },
-            Pivot { index: 4, price: 22.0, kind: PivotKind::Low },
+            Pivot {
+                index: 0,
+                price: 10.0,
+                kind: PivotKind::Low,
+            },
+            Pivot {
+                index: 1,
+                price: 20.0,
+                kind: PivotKind::High,
+            },
+            Pivot {
+                index: 2,
+                price: 14.0,
+                kind: PivotKind::Low,
+            },
+            Pivot {
+                index: 3,
+                price: 25.0,
+                kind: PivotKind::High,
+            },
+            Pivot {
+                index: 4,
+                price: 22.0,
+                kind: PivotKind::Low,
+            },
         ];
         // last_h 25 > prev_h 20 (HH), last_l 22 > prev_l 14 (HL),
         // last alt pivot is a Low, last leg |22-25|=3 < prior |25-14|=11.
@@ -587,10 +652,26 @@ mod tests {
     fn structure01_counter_trend_is_zero() {
         // Bullish dir but lower highs and lower lows => counter.
         let p = vec![
-            Pivot { index: 0, price: 30.0, kind: PivotKind::High },
-            Pivot { index: 1, price: 20.0, kind: PivotKind::Low },
-            Pivot { index: 2, price: 25.0, kind: PivotKind::High },
-            Pivot { index: 3, price: 15.0, kind: PivotKind::Low },
+            Pivot {
+                index: 0,
+                price: 30.0,
+                kind: PivotKind::High,
+            },
+            Pivot {
+                index: 1,
+                price: 20.0,
+                kind: PivotKind::Low,
+            },
+            Pivot {
+                index: 2,
+                price: 25.0,
+                kind: PivotKind::High,
+            },
+            Pivot {
+                index: 3,
+                price: 15.0,
+                kind: PivotKind::Low,
+            },
         ];
         // last_h 25 < prev_h 30, last_l 15 < prev_l 20 => COUNTER for dir>0.
         assert!((structure01(&p, 1.0, 1.0) - STRUCT_COUNTER).abs() < EPS);
@@ -599,10 +680,26 @@ mod tests {
     #[test]
     fn structure01_range_bound_when_pivots_equal() {
         let p = vec![
-            Pivot { index: 0, price: 20.0, kind: PivotKind::High },
-            Pivot { index: 1, price: 10.0, kind: PivotKind::Low },
-            Pivot { index: 2, price: 20.02, kind: PivotKind::High },
-            Pivot { index: 3, price: 10.02, kind: PivotKind::Low },
+            Pivot {
+                index: 0,
+                price: 20.0,
+                kind: PivotKind::High,
+            },
+            Pivot {
+                index: 1,
+                price: 10.0,
+                kind: PivotKind::Low,
+            },
+            Pivot {
+                index: 2,
+                price: 20.02,
+                kind: PivotKind::High,
+            },
+            Pivot {
+                index: 3,
+                price: 10.02,
+                kind: PivotKind::Low,
+            },
         ];
         // Both last/prev pairs within 0.1*atr (atr=1 => eps=0.1).
         assert!((structure01(&p, 1.0, 1.0) - STRUCT_RANGE).abs() < EPS);
