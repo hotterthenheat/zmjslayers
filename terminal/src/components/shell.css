@@ -1,0 +1,108 @@
+/*
+ * Workspace grids, designed at 3440×1440. Each workspace is a distinct
+ * ultra-wide layout over the same live snapshot. Below breakpoints we shed
+ * columns rather than reflow into stacked retail cards.
+ */
+
+.ws {
+  display: grid;
+  height: 100%;
+  gap: 6px;
+}
+
+.ws > .panel {
+  min-height: 0;
+}
+
+/* ── Cockpit: decision/read | ladder | positioning | regime/vol ──────────── */
+.ws-cockpit {
+  grid-template-columns: 300px 1.5fr 280px 300px;
+  grid-template-rows: 1.35fr 1fr auto;
+  grid-template-areas:
+    'decision ladder dealer regime'
+    'read ladder dealer vol'
+    'engines engines engines engines';
+}
+
+/* ── Pinpoint GEX: metric strip over matrix | ladder | positioning/flow ──── */
+.ws-pinpoint {
+  grid-template-columns: 1fr 1.2fr 300px;
+  grid-template-rows: auto 1fr 1fr;
+  grid-template-areas:
+    'strip strip strip'
+    'matrix ladder dealer'
+    'matrix ladder flow';
+}
+.ws-strip {
+  grid-area: strip;
+}
+
+/* ── Volatility: vol | regime | thesis/flow ──────────────────────────────── */
+.ws-volatility {
+  grid-template-columns: 1.3fr 1fr 320px;
+  grid-template-rows: 1fr 1fr;
+  grid-template-areas:
+    'vol regime thesis'
+    'vol regime flow';
+}
+
+/* ── Engine Board focus ──────────────────────────────────────────────────── */
+.ws-engines {
+  grid-template-columns: 1.6fr 300px;
+  grid-template-rows: 1.4fr 1fr;
+  grid-template-areas:
+    'engines dealer'
+    'engines regime'
+    'engines thesis';
+  grid-template-rows: 1fr 1fr 1fr;
+}
+
+.dealer-stats-embedded {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+@media (max-width: 2200px) {
+  .ws-cockpit {
+    grid-template-columns: 240px 1.4fr 260px;
+    grid-template-areas:
+      'thesis ladder dealer'
+      'thesis ladder regime'
+      'vol flow engines';
+  }
+}
+
+@media (max-width: 1500px) {
+  .ws-cockpit {
+    grid-template-columns: 1.4fr 260px;
+    grid-template-areas:
+      'ladder dealer'
+      'ladder regime'
+      'engines engines';
+  }
+  .ws-cockpit > .panel[style*='thesis'],
+  .ws-cockpit > .panel[style*='vol'],
+  .ws-cockpit > .panel[style*='flow'] {
+    display: none;
+  }
+}
+
+/* Empty state */
+.shell-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  height: 100%;
+  color: var(--text-faint);
+  font-size: var(--fs-label);
+  letter-spacing: 0.2em;
+}
+
+.shell-empty-mark {
+  font-size: 30px;
+  color: var(--state-active);
+  animation: slayer-caret 1.08s steps(1) infinite;
+}

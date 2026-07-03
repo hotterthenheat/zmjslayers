@@ -1,0 +1,20 @@
+[package]
+name = "slayer-engines"
+description = "Deterministic signal engines: GEX structure, dealer zones, regime, displacement, SkyVision"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+license.workspace = true
+
+[dependencies]
+slayer-core = { workspace = true }
+slayer-quant = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }
+
+[lints]
+workspace = true

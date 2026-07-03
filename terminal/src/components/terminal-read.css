@@ -1,0 +1,62 @@
+.read-verdict {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.read-bias {
+  font-size: var(--fs-num-xl);
+  font-weight: 720;
+  letter-spacing: 0.04em;
+  color: var(--text);
+}
+.read-notrade {
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--warning);
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  border-radius: 3px;
+  padding: 1px 5px;
+}
+
+.read-meter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.read-meter-track {
+  position: relative;
+  flex: 1;
+  height: 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.read-meter-fill {
+  position: absolute;
+  top: 0;
+  height: 100%;
+}
+.read-meter-fill.pos {
+  background: linear-gradient(90deg, transparent, var(--dir-up));
+}
+.read-meter-fill.neg {
+  background: linear-gradient(270deg, transparent, var(--dir-down));
+}
+.read-meter-center {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 1px;
+  height: 100%;
+  background: var(--border-strong);
+}
+.read-meter-val {
+  font-size: var(--fs-num);
+  color: var(--text-2);
+  min-width: 32px;
+  text-align: right;
+}

@@ -1,0 +1,47 @@
+.binary-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 18px;
+  padding: 0 7px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.binary-chip-label {
+  font-size: var(--fs-label);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.binary-chip-state {
+  font-size: var(--fs-label);
+  font-weight: 680;
+  letter-spacing: 0.06em;
+}
+
+/* ACTIVE — signal register: lit dealer-blue with a soft glow. */
+.binary-chip.is-active {
+  border-color: rgba(41, 182, 246, 0.4);
+  background: var(--state-active-bg);
+  box-shadow: 0 0 10px var(--state-active-glow);
+}
+.binary-chip.is-active .binary-chip-state {
+  color: var(--state-active);
+}
+
+/* INACTIVE — structural register: muted, recessive. */
+.binary-chip.is-inactive {
+  background: var(--state-inactive-bg);
+}
+.binary-chip.is-inactive .binary-chip-state {
+  color: var(--state-inactive);
+}
+
+.binary-chip-score {
+  font-size: var(--fs-label);
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}

@@ -1,0 +1,151 @@
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  height: 40px;
+  padding: 0 14px;
+  background: var(--mirror);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-strong);
+}
+
+.symbol-tabs {
+  display: flex;
+  gap: 3px;
+}
+
+.symbol-tab {
+  height: 22px;
+  padding: 0 12px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: var(--fs-ui);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+.symbol-tab:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+.symbol-tab.is-active {
+  color: var(--state-active);
+  border-color: rgba(41, 182, 246, 0.5);
+  background: var(--state-active-bg);
+}
+
+.hero {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.hero-sym {
+  font-size: var(--fs-label);
+  letter-spacing: 0.12em;
+  color: var(--text-dim);
+}
+.hero-px {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--num);
+  transition: color 120ms;
+}
+.hero-px.tick-up {
+  color: var(--dir-up);
+}
+.hero-px.tick-down {
+  color: var(--dir-down);
+}
+
+.hero-metrics {
+  display: flex;
+  gap: 22px;
+}
+.hero-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.hero-metric-label {
+  font-size: var(--fs-label);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.hero-metric-value {
+  font-size: var(--fs-num);
+  font-weight: 600;
+  color: var(--num);
+}
+.tone-warn {
+  color: var(--warning);
+}
+
+.palette-hint {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 24px;
+  padding: 0 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: var(--fs-ui);
+  cursor: pointer;
+}
+.palette-hint:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+.palette-prompt {
+  color: var(--state-active);
+  font-weight: 800;
+}
+.palette-hint-text {
+  letter-spacing: 0.06em;
+}
+.palette-hint kbd {
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  color: var(--text-faint);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 1px 4px;
+}
+
+/* Live tick flash (grey-up / red-down echo from the product) */
+@keyframes tick-flash-up {
+  0% {
+    text-shadow: 0 0 12px rgba(74, 222, 128, 0.7);
+  }
+  100% {
+    text-shadow: none;
+  }
+}
+@keyframes tick-flash-down {
+  0% {
+    text-shadow: 0 0 12px rgba(248, 113, 113, 0.7);
+  }
+  100% {
+    text-shadow: none;
+  }
+}
+.hero-px.tick-up {
+  animation: tick-flash-up 380ms var(--ease);
+}
+.hero-px.tick-down {
+  animation: tick-flash-down 380ms var(--ease);
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-px.tick-up,
+  .hero-px.tick-down {
+    animation: none;
+  }
+}

@@ -1,0 +1,74 @@
+@import "./tokens.css";
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background-color: var(--bg-base);
+  /* Radial dotted grid backdrop — the signature Slayer surface. */
+  background-image: radial-gradient(var(--grid-dot) 1px, transparent 1px);
+  background-size: var(--grid-size) var(--grid-size);
+  background-position: -1px -1px;
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: var(--fs-ui);
+  /* Tabular numerals globally: ticking numbers must not reflow. */
+  font-feature-settings: "tnum" 1, "ss01" 1;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+::selection {
+  background: var(--state-active-bg);
+}
+
+/* Scrollbars: thin, structural, never decorative. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+*::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 4px;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+  color: var(--num);
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+.label {
+  font-size: var(--fs-label);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.dir-up {
+  color: var(--dir-up);
+}
+
+.dir-down {
+  color: var(--dir-down);
+}

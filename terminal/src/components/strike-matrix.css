@@ -1,0 +1,146 @@
+.matrix {
+  position: relative;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  /* Near-black field so hot cells glow against it. */
+  background: color-mix(in srgb, var(--surface) 45%, var(--bg-base));
+  font-family: var(--font-mono);
+}
+
+.matrix-head,
+.matrix-row,
+.matrix-foot {
+  display: grid;
+  grid-template-columns: 74px 1fr 1fr 1fr;
+  align-items: center;
+}
+
+.matrix-head {
+  height: 20px;
+  flex: 0 0 auto;
+  border-bottom: 1px solid var(--border-strong);
+  position: sticky;
+  top: 0;
+  background: var(--surface-2);
+  z-index: 2;
+}
+
+.matrix-h {
+  font-size: var(--fs-label);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  text-align: right;
+  padding: 0 8px;
+}
+.matrix-h-strike {
+  text-align: left;
+}
+
+.matrix-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.matrix-row {
+  height: 17px;
+}
+
+.matrix-strike {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  font-size: 10.5px;
+  font-weight: 800;
+  color: var(--text-2);
+  padding: 0 8px;
+  height: 100%;
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.matrix-tag {
+  font-size: 8px;
+  font-weight: 800;
+  color: var(--state-active);
+}
+
+.matrix-cell {
+  font-size: 10px;
+  color: var(--text);
+  text-align: right;
+  padding: 0 8px;
+  height: 100%;
+  line-height: 17px;
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+/* Spot row: accent ring across the row. */
+.matrix-row.at-spot .matrix-strike,
+.matrix-row.at-spot .matrix-cell {
+  box-shadow: inset 0 0 0 1px rgba(41, 182, 246, 0.5);
+}
+.matrix-row.at-spot .matrix-strike {
+  color: var(--state-active);
+  background: var(--state-active-bg);
+}
+
+/* Wall rows: brighter ring. */
+.matrix-row.at-wall .matrix-strike {
+  color: var(--num);
+}
+
+/* Gamma-flip divider — amber line between rows. */
+.matrix-flip {
+  position: relative;
+  height: 0;
+  border-top: 1px solid var(--warning);
+  box-shadow: 0 0 8px rgba(251, 191, 36, 0.35);
+}
+.matrix-flip-tag {
+  position: absolute;
+  left: 8px;
+  top: -6px;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--warning);
+  background: var(--bg-base);
+  padding: 0 4px;
+}
+
+.matrix-foot {
+  height: 20px;
+  flex: 0 0 auto;
+  border-top: 1px solid var(--border-strong);
+  background: var(--surface-2);
+}
+.matrix-foot > span:not(.matrix-h) {
+  text-align: right;
+  padding: 0 8px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.matrix-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-faint);
+  font-size: var(--fs-label);
+  letter-spacing: 0.2em;
+}
+
+.matrix-spot-note {
+  position: absolute;
+  right: 8px;
+  bottom: 24px;
+  font-size: 8px;
+  color: var(--text-faint);
+  pointer-events: none;
+}
