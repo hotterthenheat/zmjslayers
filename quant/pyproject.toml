@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "slayer-quant"
+version = "0.1.0"
+description = "Slayer Terminal quant research layer: reference implementations, calibration, golden-vector generation"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=1.26",
+    "scipy>=1.11",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "ruff>=0.4",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "PL"]
+# PLR2004 (magic values) stays ON everywhere except tests: the no-magic-number
+# doctrine is enforced at lint level in library code.
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["PLR2004"]
