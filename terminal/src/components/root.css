@@ -1,0 +1,181 @@
+/* Layout skeleton: header / main / status-bar stacked full-height. */
+
+.terminal-root {
+  display: grid;
+  grid-template-rows: 34px 1fr var(--statusbar-h);
+  height: 100%;
+  background: var(--bg);
+}
+
+.terminal-main {
+  min-height: 0;
+  overflow: hidden;
+  padding: 4px;
+}
+
+/* Ladder meta + canvas */
+.ladder-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.ladder-meta .num {
+  font-size: var(--fs-num);
+}
+
+.ladder-canvas-wrap {
+  position: relative;
+  width: 100%;
+  height: calc(100% - 22px);
+  min-height: 0;
+}
+
+.ladder-canvas-wrap canvas {
+  display: block;
+}
+
+/* Wall block */
+.wall-block {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.wall-line {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.wall-line .num {
+  font-size: var(--fs-num);
+}
+
+/* Dual-sided thesis bar */
+.dual-bar {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.dual-side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+}
+
+.dual-side .num {
+  font-size: var(--fs-num-xl);
+  font-weight: 640;
+}
+
+/* Flag rows (compression/expansion, gamma/oi) */
+.flag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+/* Section rules */
+.section-rule {
+  margin: 8px 0 4px;
+  font-size: var(--fs-label);
+  letter-spacing: 0.1em;
+  color: var(--text-faint);
+  border-top: 1px solid var(--border);
+  padding-top: 6px;
+}
+
+/* Flow bars */
+.flow-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.flow-bar-track {
+  position: relative;
+  width: 84px;
+  height: 8px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 1px;
+  overflow: hidden;
+}
+
+.flow-bar-fill {
+  position: absolute;
+  top: 0;
+  height: 100%;
+}
+
+.flow-bar-fill.pos {
+  background: var(--dir-up);
+}
+
+.flow-bar-fill.neg {
+  background: var(--dir-down);
+}
+
+/* Empty state */
+.shell-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  height: 100%;
+  color: var(--text-faint);
+  font-size: var(--fs-label);
+  letter-spacing: 0.2em;
+}
+
+.shell-empty-mark {
+  font-size: 32px;
+  color: var(--state-inactive);
+}
+
+/* Status bar */
+.status-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: var(--statusbar-h);
+  padding: 0 10px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  font-size: var(--fs-label);
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+}
+
+.sb-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--state-inactive);
+}
+
+.sb-dot.live {
+  background: var(--dir-up);
+}
+
+.sb-warn {
+  color: var(--accent-amber);
+}
+
+.sb-spacer {
+  flex: 1;
+}

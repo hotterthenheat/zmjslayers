@@ -1,0 +1,49 @@
+/*
+ * Ultra-wide trading grid, designed at 3440×1440.
+ *
+ * Columns: thesis | ladder (wide) | positioning | regime/vol/flow stack.
+ * The engine board spans the full width along the bottom. Below 2200px the
+ * right stack collapses under the ladder; below 1500px thesis drops — we
+ * shed columns, never reflow into stacked cards.
+ */
+
+.terminal-shell {
+  display: grid;
+  height: 100%;
+  gap: 4px;
+  grid-template-columns: 260px 1.6fr 260px 300px;
+  grid-template-rows: 1fr 1fr auto;
+  grid-template-areas:
+    'thesis ladder dealer regime'
+    'thesis ladder dealer vol'
+    'engines engines engines flow';
+}
+
+.terminal-shell > .panel {
+  min-height: 0;
+}
+
+@media (max-width: 2200px) {
+  .terminal-shell {
+    grid-template-columns: 240px 1.4fr 240px;
+    grid-template-areas:
+      'thesis ladder dealer'
+      'thesis ladder regime'
+      'vol flow engines';
+  }
+}
+
+@media (max-width: 1500px) {
+  .terminal-shell {
+    grid-template-columns: 1.4fr 240px;
+    grid-template-areas:
+      'ladder dealer'
+      'ladder regime'
+      'engines engines';
+  }
+  .terminal-shell .panel[style*='thesis'],
+  .terminal-shell .panel[style*='vol'],
+  .terminal-shell .panel[style*='flow'] {
+    display: none;
+  }
+}

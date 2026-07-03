@@ -1,0 +1,68 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--panel-title-h);
+  padding: 0 var(--pad-panel);
+  background: var(--surface-raised);
+  border-bottom: 1px solid var(--border);
+  flex: 0 0 auto;
+}
+
+.panel-title {
+  font-size: var(--fs-label);
+  font-weight: 640;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.panel-aside {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.panel-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: var(--pad-panel);
+  overflow: auto;
+}
+
+.kv-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  height: var(--row-h);
+  gap: 12px;
+}
+
+.kv-label {
+  font-size: var(--fs-ui);
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.kv-value {
+  font-size: var(--fs-num);
+  color: var(--num);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.kv-emph .kv-value {
+  font-size: var(--fs-num-lg);
+  font-weight: 600;
+}
