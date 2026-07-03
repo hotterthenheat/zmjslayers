@@ -24,7 +24,7 @@ function bar(value: number) {
 
 export function FlowReadout({ flow }: { flow: FlowPanel }) {
   return (
-    <Panel title="Dealer Flow" area="flow">
+    <Panel title="Dealer Flow" area="flow" accent="dealer">
       <Row label="Vanna hedge-flow">{bar(flow.vanna_flow)}</Row>
       <Row label="Charm bias">{bar(flow.charm_bias)}</Row>
       <Row label="OI migration">{bar(flow.migration)}</Row>

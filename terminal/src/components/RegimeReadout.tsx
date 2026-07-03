@@ -9,6 +9,7 @@ export function RegimeReadout({ regime }: { regime: RegimePanel }) {
   return (
     <Panel
       title="Regime"
+      accent="warning"
       area="regime"
       aside={<BinaryChip label="conf" readout={regime.confidence} />}
     >

@@ -11,6 +11,7 @@ export function ThesisReadout({ thesis }: { thesis: ThesisPanel }) {
   return (
     <Panel
       title="Thesis"
+      accent="thesis"
       area="thesis"
       aside={<BinaryChip label="engaged" readout={thesis.engagement} />}
     >

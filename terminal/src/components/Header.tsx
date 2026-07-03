@@ -2,6 +2,7 @@
 
 import { useTerminal } from '@/store'
 import { price, clock } from '@/format'
+import { BrandLogo } from './BrandLogo'
 import './header.css'
 
 export function Header() {
@@ -10,11 +11,7 @@ export function Header() {
 
   return (
     <header className="terminal-header">
-      <div className="brand">
-        <span className="brand-mark">◆</span>
-        <span className="brand-name">SLAYER</span>
-        <span className="brand-sub">TERMINAL</span>
-      </div>
+      <BrandLogo />
 
       <nav className="symbol-tabs">
         {symbols.map((s) => (

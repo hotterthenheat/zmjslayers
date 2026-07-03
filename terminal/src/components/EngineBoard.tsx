@@ -9,7 +9,7 @@ import './engine-board.css'
 
 export function EngineBoard({ engines }: { engines: EngineStatus[] }) {
   return (
-    <Panel title="Engine Board" area="engines">
+    <Panel title="Engine Board" area="engines" accent="dealer">
       <div className="engine-grid">
         {engines.map((e) => {
           const active = e.state === 'ACTIVE'

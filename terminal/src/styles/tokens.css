@@ -1,42 +1,68 @@
 /*
  * Slayer Terminal design tokens.
  *
- * One theme: dark, cold, dense. Typography is the SF Pro system stack with
- * tabular numerals globally — numbers must not wiggle as they tick.
- * Binary state renders in exactly two visual registers: ACTIVE (signal
- * blue) and INACTIVE (structural gray). There is no third register.
+ * Visual language ported faithfully from the Slayer product: deep "ink black"
+ * (#0A0A0A, never pure black), a radial dotted grid backdrop, translucent
+ * "mirror-glass" panels, the mirror-grey text ramp, and the greek-purple /
+ * dealer-blue accent system. Typography stays on the SF Pro / SF Mono system
+ * stacks per the terminal's numerical-legibility mandate (no bundled fonts).
+ *
+ * Binary-state doctrine is preserved: a readout is ACTIVE (signal register —
+ * dealer-blue, lit) or INACTIVE (structural register — muted grey). There is
+ * no third register. Directional facts (bullish/bearish) are separate data,
+ * rendered in the up/down palette.
  */
 
 :root {
-  /* Surfaces */
-  --bg: #07090d;
-  --surface: #0d1017;
-  --surface-raised: #12161f;
-  --border: #1b2130;
-  --border-strong: #273042;
+  /* Ink-black foundation (never #000000) + dotted grid */
+  --bg-base: #0a0a0a;
+  --grid-dot: #16161a;
+  --grid-size: 22px;
 
-  /* Text */
-  --text: #c8d1dc;
-  --text-dim: #7d8794;
-  --text-faint: #4d5665;
-  --num: #e8eef5;
+  /* Mirror-grey surface ramp */
+  --surface: #141414;
+  --surface-2: #1c1c1c;
+  --surface-3: #242424;
+  --mirror: rgba(0, 0, 0, 0.8);
+  --mirror-glass: rgba(0, 0, 0, 0.65);
 
-  /* Binary state — the only two registers */
-  --state-active: #4da3ff;
-  --state-active-bg: rgba(77, 163, 255, 0.12);
-  --state-inactive: #566070;
-  --state-inactive-bg: rgba(86, 96, 112, 0.08);
+  /* Hairline borders (white-on-ink) */
+  --border-faint: rgba(255, 255, 255, 0.05);
+  --border: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.18);
+
+  /* Mirror-grey text ramp — never pure white */
+  --text: #e5e5e5;
+  --text-2: #c4c4c4;
+  --text-dim: #a3a3a3;
+  --text-faint: #525252;
+  --num: #f4f5f6;
+
+  /* Binary-state registers */
+  --state-active: #29b6f6; /* dealer-blue signal */
+  --state-active-glow: rgba(41, 182, 246, 0.28);
+  --state-active-bg: rgba(41, 182, 246, 0.1);
+  --state-inactive: #525252; /* structural grey */
+  --state-inactive-bg: rgba(82, 82, 82, 0.08);
+
+  /* Domain accents (from the product palette) */
+  --greek: #b06fe6; /* GEX / vanna / charm */
+  --dealer: #29b6f6; /* dealer / market-maker */
+  --warning: #fbbf24;
+  --success: #4ade80;
+  --danger: #f87171;
+  --info: #60a5fa;
 
   /* Direction (data, not state) */
-  --dir-up: #2fa370;
-  --dir-down: #c74e4e;
+  --dir-up: #4ade80;
+  --dir-down: #f87171;
 
-  /* Accents */
-  --accent-amber: #d29922;
-  --gex-positive: #3fb27f;
-  --gex-negative: #d0629a;
+  /* GEX exposure diverging pair */
+  --gex-positive: #4ade80;
+  --gex-negative: #f87171;
+  --prompt: #6b7177; /* terminal-prompt grey */
 
-  /* Typography */
+  /* Typography — SF Pro (UI/numbers) + SF Mono (terminal motif) */
   --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
     "Segoe UI", "Helvetica Neue", sans-serif;
   --font-mono: ui-monospace, "SF Mono", "SFMono-Regular", Menlo, Consolas,
@@ -48,9 +74,12 @@
   --fs-num-xl: 22px;
 
   /* Density */
-  --pad-panel: 8px;
+  --pad-panel: 9px;
   --pad-cell: 4px;
   --row-h: 20px;
   --statusbar-h: 26px;
-  --panel-title-h: 24px;
+  --panel-title-h: 26px;
+  --radius: 10px;
+
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
 }

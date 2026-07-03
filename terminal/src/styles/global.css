@@ -16,7 +16,11 @@ body,
 }
 
 body {
-  background: var(--bg);
+  background-color: var(--bg-base);
+  /* Radial dotted grid backdrop — the signature Slayer surface. */
+  background-image: radial-gradient(var(--grid-dot) 1px, transparent 1px);
+  background-size: var(--grid-size) var(--grid-size);
+  background-position: -1px -1px;
   color: var(--text);
   font-family: var(--font-ui);
   font-size: var(--fs-ui);
@@ -28,7 +32,7 @@ body {
 }
 
 ::selection {
-  background: rgba(77, 163, 255, 0.3);
+  background: var(--state-active-bg);
 }
 
 /* Scrollbars: thin, structural, never decorative. */
@@ -36,10 +40,22 @@ body {
   scrollbar-width: thin;
   scrollbar-color: var(--border-strong) transparent;
 }
+*::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 4px;
+}
 
 .num {
   font-variant-numeric: tabular-nums;
   color: var(--num);
+}
+
+.mono {
+  font-family: var(--font-mono);
 }
 
 .label {

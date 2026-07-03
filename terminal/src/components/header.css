@@ -8,30 +8,6 @@
   border-bottom: 1px solid var(--border-strong);
 }
 
-.brand {
-  display: flex;
-  align-items: baseline;
-  gap: 5px;
-}
-
-.brand-mark {
-  color: var(--state-active);
-  font-size: 13px;
-}
-
-.brand-name {
-  font-weight: 720;
-  letter-spacing: 0.14em;
-  font-size: 13px;
-  color: var(--num);
-}
-
-.brand-sub {
-  font-size: var(--fs-label);
-  letter-spacing: 0.2em;
-  color: var(--text-faint);
-}
-
 .symbol-tabs {
   display: flex;
   gap: 2px;

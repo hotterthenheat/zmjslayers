@@ -8,7 +8,7 @@ import { money, price, pct, signed } from '@/format'
 export function DealerStats({ dealer, spot }: { dealer: DealerPanel; spot: number }) {
   const wall = (strike: number | null) => (strike === null ? '—' : price(strike))
   return (
-    <Panel title="Positioning" area="dealer">
+    <Panel title="Positioning" area="dealer" accent="dealer">
       <Row label="Dealer State Index" emphasis>
         <span className={dealer.dsi >= 0 ? 'dir-up' : 'dir-down'}>{signed(dealer.dsi, 3)}</span>
       </Row>

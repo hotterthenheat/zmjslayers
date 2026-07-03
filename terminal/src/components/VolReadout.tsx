@@ -6,7 +6,7 @@ import { pct, signed } from '@/format'
 
 export function VolReadout({ vol }: { vol: VolPanel }) {
   return (
-    <Panel title="Volatility" area="vol">
+    <Panel title="Volatility" area="vol" accent="greek">
       <Row label="Realized Vol">{pct(vol.realized_vol, 1)}</Row>
       <Row label="Implied Vol">{pct(vol.implied_vol, 1)}</Row>
       <Row label="Var Risk Premium" emphasis>

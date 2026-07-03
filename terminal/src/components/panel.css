@@ -1,11 +1,15 @@
+/* Mirror-glass panel chrome — translucent ink over the dotted grid. */
+
 .panel {
   display: flex;
   flex-direction: column;
   min-height: 0;
   min-width: 0;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 3px;
+  background: var(--mirror);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-faint);
+  border-radius: var(--radius);
   overflow: hidden;
 }
 
@@ -15,17 +19,41 @@
   justify-content: space-between;
   height: var(--panel-title-h);
   padding: 0 var(--pad-panel);
-  background: var(--surface-raised);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--border-faint);
   flex: 0 0 auto;
 }
 
 .panel-title {
   font-size: var(--fs-label);
-  font-weight: 640;
-  letter-spacing: 0.1em;
+  font-weight: 600;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--text-dim);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Accent tick before a panel title (domain-colored). */
+.panel-title::before {
+  content: "";
+  width: 3px;
+  height: 11px;
+  border-radius: 1px;
+  background: var(--panel-accent, var(--text-faint));
+}
+
+.panel[data-accent="greek"] {
+  --panel-accent: var(--greek);
+}
+.panel[data-accent="dealer"] {
+  --panel-accent: var(--dealer);
+}
+.panel[data-accent="warning"] {
+  --panel-accent: var(--warning);
+}
+.panel[data-accent="thesis"] {
+  --panel-accent: var(--info);
 }
 
 .panel-aside {

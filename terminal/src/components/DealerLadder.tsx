@@ -44,6 +44,7 @@ export function DealerLadder({ dealer, spot }: { dealer: DealerPanel; spot: numb
   return (
     <Panel
       title="Dealer Gamma Ladder"
+      accent="greek"
       area="ladder"
       aside={<BinaryChip label="flip" readout={dealer.gamma_flip_state} />}
     >

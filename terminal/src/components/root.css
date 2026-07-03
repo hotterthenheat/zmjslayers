@@ -4,7 +4,7 @@
   display: grid;
   grid-template-rows: 34px 1fr var(--statusbar-h);
   height: 100%;
-  background: var(--bg);
+  background: var(--bg-base);
 }
 
 .terminal-main {
@@ -70,7 +70,7 @@
   flex-direction: column;
   align-items: center;
   padding: 6px;
-  background: var(--surface-raised);
+  background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: 2px;
 }
@@ -109,7 +109,7 @@
   position: relative;
   width: 84px;
   height: 8px;
-  background: var(--surface-raised);
+  background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: 1px;
   overflow: hidden;
@@ -173,7 +173,7 @@
 }
 
 .sb-warn {
-  color: var(--accent-amber);
+  color: var(--warning);
 }
 
 .sb-spacer {
