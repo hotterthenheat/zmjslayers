@@ -1,0 +1,60 @@
+.dealer-pulse {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pulse-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.pulse-head .num {
+  font-size: var(--fs-num-lg);
+  font-weight: 700;
+}
+
+.pulse-track {
+  position: relative;
+  height: 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.pulse-fill {
+  position: absolute;
+  top: 0;
+  height: 100%;
+}
+.pulse-fill.pos {
+  background: linear-gradient(90deg, transparent, var(--dir-up));
+}
+.pulse-fill.neg {
+  background: linear-gradient(270deg, transparent, var(--dir-down));
+}
+
+.pulse-center {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 1px;
+  height: 100%;
+  background: var(--border-strong);
+  transform: translateX(-0.5px);
+}
+
+.pulse-legend {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.pulse-d01 {
+  color: var(--text-faint);
+  letter-spacing: 0.04em;
+  text-transform: none;
+}

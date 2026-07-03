@@ -1,16 +1,22 @@
-/* Layout skeleton: header / main / status-bar stacked full-height. */
+/* Layout skeleton: left rail + (topbar / main / status-bar) column. */
 
 .terminal-root {
-  display: grid;
-  grid-template-rows: 34px 1fr var(--statusbar-h);
+  display: flex;
   height: 100%;
   background: var(--bg-base);
+}
+
+.terminal-column {
+  display: grid;
+  grid-template-rows: 40px 1fr var(--statusbar-h);
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .terminal-main {
   min-height: 0;
   overflow: hidden;
-  padding: 4px;
+  padding: 6px;
 }
 
 /* Ladder meta + canvas */

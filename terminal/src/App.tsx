@@ -8,9 +8,11 @@ import { useEffect } from 'react'
 import { useTerminal } from './store'
 import { GatewayClient } from './ws/client'
 import type { WireFrame } from './wire/snapshot'
-import { Header } from './components/Header'
+import { Sidebar } from './components/Sidebar'
+import { TopBar } from './components/TopBar'
 import { TerminalShell } from './components/TerminalShell'
 import { StatusBar } from './components/StatusBar'
+import { CommandPalette } from './components/CommandPalette'
 
 /** WebSocket URL: same-origin in prod, Vite proxy in dev. */
 function gatewayUrl(): string {
@@ -33,11 +35,15 @@ export function App() {
 
   return (
     <div className="terminal-root">
-      <Header />
-      <main className="terminal-main">
-        <TerminalShell />
-      </main>
-      <StatusBar />
+      <Sidebar />
+      <div className="terminal-column">
+        <TopBar />
+        <main className="terminal-main">
+          <TerminalShell />
+        </main>
+        <StatusBar />
+      </div>
+      <CommandPalette />
     </div>
   )
 }

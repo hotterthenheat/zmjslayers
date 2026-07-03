@@ -1,18 +1,17 @@
-/** Dealer-positioning scalar readouts beside the ladder. */
+/** Dealer-positioning scalar readouts. Standalone panel, or embedded rows. */
 
 import type { DealerPanel } from '@/wire/snapshot'
 import { Panel, Row } from './Panel'
 import { BinaryChip } from './BinaryChip'
 import { money, price, pct, signed } from '@/format'
 
-export function DealerStats({ dealer, spot }: { dealer: DealerPanel; spot: number }) {
+function StatRows({ dealer, spot }: { dealer: DealerPanel; spot: number }) {
   const wall = (strike: number | null) => (strike === null ? '—' : price(strike))
   return (
-    <Panel title="Positioning" area="dealer" accent="dealer">
+    <>
       <Row label="Dealer State Index" emphasis>
         <span className={dealer.dsi >= 0 ? 'dir-up' : 'dir-down'}>{signed(dealer.dsi, 3)}</span>
       </Row>
-      <Row label="dealer01">{dealer.dealer01.toFixed(3)}</Row>
       <Row label="Net DEX">{money(dealer.net_dex)}</Row>
       <Row label="Net VEX">{money(dealer.net_vex)}</Row>
       <Row label="Net Charm">{money(dealer.net_charm)}</Row>
@@ -31,10 +30,31 @@ export function DealerStats({ dealer, spot }: { dealer: DealerPanel; spot: numbe
           <BinaryChip label="" readout={dealer.put_wall.state} />
         </div>
       </div>
-      {dealer.excluded_quotes > 0 && (
-        <Row label="Excluded quotes">{dealer.excluded_quotes}</Row>
-      )}
+      {dealer.excluded_quotes > 0 && <Row label="Excluded quotes">{dealer.excluded_quotes}</Row>}
       <Row label="Spot">{price(spot)}</Row>
+    </>
+  )
+}
+
+export function DealerStats({
+  dealer,
+  spot,
+  embedded = false,
+}: {
+  dealer: DealerPanel
+  spot: number
+  embedded?: boolean
+}) {
+  if (embedded) {
+    return (
+      <div className="dealer-stats-embedded">
+        <StatRows dealer={dealer} spot={spot} />
+      </div>
+    )
+  }
+  return (
+    <Panel title="Positioning" area="dealer" accent="dealer">
+      <StatRows dealer={dealer} spot={spot} />
     </Panel>
   )
 }

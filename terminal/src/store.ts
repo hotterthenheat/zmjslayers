@@ -11,16 +11,23 @@ import { create } from 'zustand'
 import type { TerminalSnapshot, WireFrame } from './wire/snapshot'
 import { isSnapshot } from './wire/snapshot'
 
+/** The workspace views selectable from the left rail. */
+export type Workspace = 'cockpit' | 'pinpoint' | 'volatility' | 'engines'
+
 interface TerminalState {
   connected: boolean
   feed: string
   activeSymbol: string | null
   snapshots: Record<string, TerminalSnapshot>
   symbols: string[]
+  workspace: Workspace
+  paletteOpen: boolean
   setConnected: (connected: boolean) => void
   setFeed: (feed: string) => void
   applyFrame: (frame: WireFrame) => void
   setActiveSymbol: (symbol: string) => void
+  setWorkspace: (workspace: Workspace) => void
+  setPaletteOpen: (open: boolean) => void
 }
 
 export const useTerminal = create<TerminalState>((set) => ({
@@ -29,9 +36,13 @@ export const useTerminal = create<TerminalState>((set) => ({
   activeSymbol: null,
   snapshots: {},
   symbols: [],
+  workspace: 'cockpit',
+  paletteOpen: false,
 
   setConnected: (connected) => set({ connected }),
   setFeed: (feed) => set({ feed }),
+  setWorkspace: (workspace) => set({ workspace }),
+  setPaletteOpen: (paletteOpen) => set({ paletteOpen }),
 
   applyFrame: (frame) => {
     if (frame.type === 'HELLO') {

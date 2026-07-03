@@ -1,0 +1,72 @@
+.status-bar {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  height: var(--statusbar-h);
+  padding: 0 14px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  font-size: var(--fs-label);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.sb-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.sb-key {
+  color: var(--text-faint);
+}
+
+/* The signature amber NY clock. */
+.sb-clock {
+  color: var(--warning);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.sb-warn {
+  color: var(--warning);
+}
+
+.sb-center {
+  margin: 0 auto;
+  color: var(--text-faint);
+  letter-spacing: 0.14em;
+}
+
+.sb-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--state-inactive);
+}
+.sb-dot.live {
+  background: var(--success);
+  box-shadow: 0 0 8px rgba(74, 222, 128, 0.6);
+  animation: sb-ping 2s ease-in-out infinite;
+}
+
+.sb-brand {
+  color: var(--text-faint);
+}
+
+@keyframes sb-ping {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sb-dot.live {
+    animation: none;
+  }
+}
