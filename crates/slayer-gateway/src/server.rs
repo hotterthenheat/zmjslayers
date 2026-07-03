@@ -2,6 +2,12 @@
 //!
 //! Thin by design: every route reads pre-serialized frames from the
 //! [`SnapshotHub`]. No computation happens here.
+//!
+//! Handlers use axum's `Response` as their error type (the idiomatic
+//! fallible-handler pattern); `Response` is a large enum, so the
+//! `result_large_err` lint is allowed module-wide rather than boxing every
+//! early return.
+#![allow(clippy::result_large_err)]
 
 use crate::hub::SnapshotHub;
 use axum::{

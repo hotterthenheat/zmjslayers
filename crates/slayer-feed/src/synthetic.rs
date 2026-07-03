@@ -26,6 +26,9 @@ use tokio::sync::mpsc;
 /// Simulated milliseconds advanced per tick (one simulated minute). Each
 /// tick closes one 1-minute candle.
 const SIM_STEP_MS: u64 = 60_000;
+/// Intrabar GBM sub-steps integrated per 1-minute candle so each bar carries a
+/// real high/low path (single-step bars starve range-based vol estimators).
+const INTRA_STEPS_PER_BAR: usize = 24;
 /// Ticks per emitted chain snapshot.
 const TICKS_PER_CHAIN: u32 = 5;
 /// Strikes generated on each side of spot.
@@ -204,18 +207,30 @@ impl SymState {
     }
 
     /// Advance one simulated minute of GBM with a mean-reverting vol regime.
+    ///
+    /// The minute is integrated as [`INTRA_STEPS_PER_BAR`] finer sub-steps so
+    /// each candle carries a genuine intrabar high/low path — range-based
+    /// realized-vol estimators would systematically under-read a single-step
+    /// bar (open→close only).
     fn step(&mut self) {
         const MINUTES_PER_YEAR: f64 = 252.0 * 390.0;
-        let dt = 1.0 / MINUTES_PER_YEAR;
-        let z: f64 = sample_normal(&mut self.rng);
-        self.spot *= (self.vol * dt.sqrt() * z - 0.5 * self.vol * self.vol * dt).exp();
+        let dt = 1.0 / (MINUTES_PER_YEAR * INTRA_STEPS_PER_BAR as f64);
+        let sqrt_dt = dt.sqrt();
+        let mut path_abs_z = 0.0;
+        for _ in 0..INTRA_STEPS_PER_BAR {
+            let z: f64 = sample_normal(&mut self.rng);
+            self.spot *= (self.vol * sqrt_dt * z - 0.5 * self.vol * self.vol * dt).exp();
+            self.bar_high = self.bar_high.max(self.spot);
+            self.bar_low = self.bar_low.min(self.spot);
+            path_abs_z += z.abs();
+        }
+        // Vol regime wanders once per bar (its own √(bar-dt) scale).
+        let bar_dt = 1.0 / MINUTES_PER_YEAR;
         let vz: f64 = sample_normal(&mut self.rng);
-        self.vol = (self.vol + VOL_OF_VOL * dt.sqrt() * vz * self.vol
-            + VOL_MEAN_REVERT * (self.params.vol - self.vol) * dt.sqrt())
+        self.vol = (self.vol + VOL_OF_VOL * bar_dt.sqrt() * vz * self.vol
+            + VOL_MEAN_REVERT * (self.params.vol - self.vol) * bar_dt.sqrt())
         .clamp(VOL_BOUNDS.0, VOL_BOUNDS.1);
-        self.bar_high = self.bar_high.max(self.spot);
-        self.bar_low = self.bar_low.min(self.spot);
-        self.bar_volume += 1_000.0 * (1.0 + z.abs());
+        self.bar_volume += 1_000.0 * (1.0 + path_abs_z / INTRA_STEPS_PER_BAR as f64);
     }
 
     fn close_candle(&mut self, ts: TsMillis) -> Candle {

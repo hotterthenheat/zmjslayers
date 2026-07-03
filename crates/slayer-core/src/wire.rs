@@ -189,9 +189,13 @@ pub struct EngineStatus {
     pub score: f64,
 }
 
-/// The complete per-symbol terminal snapshot — one WebSocket frame.
+/// The complete per-symbol terminal snapshot.
+///
+/// Always transported inside a [`WireFrame::Snapshot`], which supplies the
+/// `"type":"SNAPSHOT"` discriminator via its internal tag — this struct
+/// therefore carries no tag of its own (a second one would duplicate the JSON
+/// key). The fields flatten directly beneath the frame tag on the wire.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(tag = "type", rename = "SNAPSHOT")]
 pub struct TerminalSnapshot {
     /// Wire protocol version (mirrors [`WIRE_VERSION`]).
     pub wire_version: u32,
@@ -315,11 +319,19 @@ mod tests {
                 score: 0.8,
             }],
         };
+        // Bare snapshot round-trips (no tag of its own).
         let json = serde_json::to_string(&snap).unwrap();
-        assert!(json.contains(r#""type":"SNAPSHOT""#));
         assert!(json.contains(r#""state":"ACTIVE""#));
         let round: TerminalSnapshot = serde_json::from_str(&json).unwrap();
         assert_eq!(round, snap);
+
+        // The frame envelope supplies exactly one "type":"SNAPSHOT" tag.
+        let frame = WireFrame::Snapshot(Box::new(snap));
+        let fjson = serde_json::to_string(&frame).unwrap();
+        assert_eq!(fjson.matches(r#""type":"SNAPSHOT""#).count(), 1);
+        assert!(!fjson.contains(r#""type":"SNAPSHOT","type""#));
+        let fround: WireFrame = serde_json::from_str(&fjson).unwrap();
+        assert_eq!(fround, frame);
     }
 
     #[test]

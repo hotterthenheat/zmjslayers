@@ -14,8 +14,6 @@ pub const CANDLE_CAPACITY: usize = 512;
 /// Rolling state for one symbol.
 #[derive(Debug, Clone)]
 pub struct SymbolBook {
-    /// Ticker.
-    pub symbol: Symbol,
     /// Bounded chronological candle history.
     pub candles: VecDeque<Candle>,
     /// Latest option chain snapshot, if any has arrived.
@@ -27,9 +25,8 @@ pub struct SymbolBook {
 }
 
 impl SymbolBook {
-    fn new(symbol: Symbol) -> Self {
+    fn new() -> Self {
         Self {
-            symbol,
             candles: VecDeque::with_capacity(CANDLE_CAPACITY),
             chain: None,
             spot: None,
@@ -96,10 +93,7 @@ impl MarketBook {
             MarketEvent::Candle { symbol, candle, .. } => (symbol.clone(), candle.ts),
             MarketEvent::Spot(s) => (s.symbol.clone(), s.ts),
         };
-        let book = self
-            .books
-            .entry(symbol.clone())
-            .or_insert_with(|| SymbolBook::new(symbol.clone()));
+        let book = self.books.entry(symbol.clone()).or_insert_with(SymbolBook::new);
         book.last_event_ts = book.last_event_ts.max(ts);
         match event {
             MarketEvent::Chain(chain) => book.chain = Some(chain),
@@ -109,8 +103,10 @@ impl MarketBook {
         symbol
     }
 
-    /// Book for a symbol, if events have arrived for it.
+    /// Book for a symbol, if events have arrived for it. Used by tests and
+    /// reserved for future REST introspection endpoints.
     #[must_use]
+    #[allow(dead_code)]
     pub fn get(&self, symbol: &Symbol) -> Option<&SymbolBook> {
         self.books.get(symbol)
     }
@@ -118,11 +114,6 @@ impl MarketBook {
     /// Mutable book access (engine pipeline needs `candle_slice`).
     pub fn get_mut(&mut self, symbol: &Symbol) -> Option<&mut SymbolBook> {
         self.books.get_mut(symbol)
-    }
-
-    /// All symbols with state.
-    pub fn symbols(&self) -> impl Iterator<Item = &Symbol> {
-        self.books.keys()
     }
 }
 
