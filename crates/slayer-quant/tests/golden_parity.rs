@@ -3,7 +3,7 @@
 //! (`quant/src/slayer_quant/golden.py`). Drift between languages is a test
 //! failure, not a code-review debate.
 
-#![allow(clippy::unwrap_used)]
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use serde::Deserialize;
 use slayer_core::{Candle, OptionRight, TsMillis};

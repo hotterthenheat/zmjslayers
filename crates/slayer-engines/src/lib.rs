@@ -8,6 +8,9 @@
 //! Provenance: `docs/spec/` — each module documents which legacy engines it
 //! reimplements and which catalogued defects it deliberately fixes.
 
+pub mod dealer;
 pub mod gex;
+pub mod regime;
 pub mod technicals;
 pub mod thesis;
+pub mod zones;
