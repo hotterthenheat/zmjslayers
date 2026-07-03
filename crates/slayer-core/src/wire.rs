@@ -17,7 +17,7 @@ use serde::{Deserialize, Serialize};
 
 /// Wire protocol version. Bump on any breaking schema change; the gateway
 /// advertises it on the WS hello frame and `/api/v1/health`.
-pub const WIRE_VERSION: u32 = 1;
+pub const WIRE_VERSION: u32 = 2;
 
 /// A labeled numeric metric with an optional unit tag, for dense readouts.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -182,6 +182,60 @@ pub struct FlowPanel {
     pub oi_flow: Readout,
 }
 
+/// A single named gate condition for the decision panel — the *why* behind a
+/// binary decision.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct GateCondition {
+    /// Condition label (e.g. `p_cal ≥ 0.62`).
+    pub label: String,
+    /// Whether this condition currently passes.
+    pub pass: bool,
+    /// The condition's measured value.
+    pub value: f64,
+}
+
+/// The decision panel — the SkyVision gate collapsed to binary. `opportunity`
+/// is ACTIVE iff every gate condition passes; its score is the 0–100
+/// opportunity quality. Conditions expose the *why*.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DecisionPanel {
+    /// ACTIVE ⟺ all gate conditions pass; score = opportunity quality (0–100).
+    pub opportunity: Readout,
+    /// Descriptive action label (e.g. `ENTER`, `WAIT`).
+    pub action: String,
+    /// Expected value of the modeled trade (fractional return).
+    pub expected_value: f64,
+    /// Calibrated win probability, [0, 1].
+    pub calibrated_p: f64,
+    /// Reward-to-risk ratio.
+    pub reward_risk: f64,
+    /// Historical tail-risk score, [0, 1].
+    pub tail_risk: f64,
+    /// Per-condition gate breakdown.
+    pub conditions: Vec<GateCondition>,
+}
+
+/// The terminal-read panel — the dealer-structure directional read.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TerminalReadPanel {
+    /// Signed directional score, [-100, 100] (+ long, − short).
+    pub score: f64,
+    /// Directional bias label (`LONG` / `SHORT` / `NEUTRAL`).
+    pub bias: String,
+    /// Dealer regime label (`PIN` / `TREND`).
+    pub regime: String,
+    /// GEX-outlook regime (`PINNING` / `GAMMA_SQUEEZE` / …).
+    pub outlook: String,
+    /// Read confidence, 0–100.
+    pub confidence: f64,
+    /// `true` when the directional bracket is incoherent (stand aside).
+    pub no_trade: bool,
+    /// ACTIVE ⟺ the directional read is engaged past its threshold.
+    pub engaged: Readout,
+    /// 0DTE finish-above / finish-below / pin probabilities, [0, 1] (labeled).
+    pub zero_dte: Vec<Metric>,
+}
+
 /// A single engine's board entry: its binary state and continuous score.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct EngineStatus {
@@ -224,6 +278,10 @@ pub struct TerminalSnapshot {
     pub vol: VolPanel,
     /// Dealer-flow dynamics.
     pub flow: FlowPanel,
+    /// The SkyVision decision gate (binary opportunity + quality + the why).
+    pub decision: DecisionPanel,
+    /// The dealer-structure directional read (bias / regime / 0DTE).
+    pub read: TerminalReadPanel,
     /// The engine board: every engine's binary state + score, for the
     /// status strip.
     pub engines: Vec<EngineStatus>,
@@ -343,6 +401,35 @@ mod tests {
                     state: BinaryState::Inactive,
                     score: 0.0,
                 },
+            },
+            decision: DecisionPanel {
+                opportunity: Readout {
+                    state: BinaryState::Inactive,
+                    score: 42.0,
+                },
+                action: "WAIT".into(),
+                expected_value: 0.0,
+                calibrated_p: 0.5,
+                reward_risk: 1.2,
+                tail_risk: 0.3,
+                conditions: vec![GateCondition {
+                    label: "p_cal ≥ 0.62".into(),
+                    pass: false,
+                    value: 0.5,
+                }],
+            },
+            read: TerminalReadPanel {
+                score: 12.0,
+                bias: "NEUTRAL".into(),
+                regime: "PIN".into(),
+                outlook: "RANGE".into(),
+                confidence: 40.0,
+                no_trade: false,
+                engaged: Readout {
+                    state: BinaryState::Inactive,
+                    score: 0.12,
+                },
+                zero_dte: vec![],
             },
             engines: vec![EngineStatus {
                 engine: "GEX".into(),

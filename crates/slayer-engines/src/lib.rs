@@ -9,6 +9,7 @@
 //! reimplements and which catalogued defects it deliberately fixes.
 
 pub mod dealer;
+pub mod dealer_read;
 pub mod gex;
 pub mod regime;
 pub mod technicals;

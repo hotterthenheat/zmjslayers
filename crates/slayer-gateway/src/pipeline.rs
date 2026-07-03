@@ -13,8 +13,8 @@
 
 use crate::timecalc::years_to_expiry;
 use slayer_core::wire::{
-    DealerPanel, EngineStatus, FlowPanel, Metric, RegimePanel, StrikeRow, TerminalSnapshot,
-    ThesisPanel, VolPanel, WIRE_VERSION, WallReadout,
+    DealerPanel, DecisionPanel, EngineStatus, FlowPanel, Metric, RegimePanel, StrikeRow,
+    TerminalReadPanel, TerminalSnapshot, ThesisPanel, VolPanel, WIRE_VERSION, WallReadout,
 };
 use slayer_core::{BinaryState, ExpiryDate, OptionChain, OptionRight, Readout, Symbol, TsMillis};
 use slayer_engines::dealer::{self, DealerDynamicsInput, DealerPrevStates};
@@ -204,6 +204,13 @@ impl PipelineState {
             confident: regime.classification.confident.state,
         };
 
+        // Decision + directional read. Composed from live structure; the full
+        // signal-gate wiring (calibration/tail-risk/trust) lands with the
+        // slayer-signal integration — until then the decision honestly
+        // abstains (INACTIVE) rather than asserting an ungated opportunity.
+        let read = map_read(&thesis, &dealer_panel, &vol);
+        let decision = abstaining_decision();
+
         Some(TerminalSnapshot {
             wire_version: WIRE_VERSION,
             symbol: symbol.as_str().to_owned(),
@@ -216,8 +223,53 @@ impl PipelineState {
             regime: map_regime(&regime),
             vol,
             flow: flow_panel,
+            decision,
+            read,
             engines,
         })
+    }
+}
+
+/// Directional read from live structure: bias from the thesis, regime from the
+/// dealer gamma sign, confidence from the dominant thesis side. Uses only real
+/// quantities; the richer dealer-read composites land with wave-2 integration.
+fn map_read(thesis: &ThesisReadout, dealer: &DealerPanel, _vol: &VolPanel) -> TerminalReadPanel {
+    let long = f64::from(thesis.long_score);
+    let short = f64::from(thesis.short_score);
+    let score = (long - short).clamp(-100.0, 100.0);
+    let bias = if thesis.direction > 0 {
+        "LONG"
+    } else if thesis.direction < 0 {
+        "SHORT"
+    } else {
+        "NEUTRAL"
+    };
+    let regime = if dealer.net_gex >= 0.0 { "PIN" } else { "TREND" };
+    let outlook = if dealer.net_gex >= 0.0 { "RANGE" } else { "TREND" };
+    TerminalReadPanel {
+        score,
+        bias: bias.to_owned(),
+        regime: regime.to_owned(),
+        outlook: outlook.to_owned(),
+        confidence: long.max(short),
+        no_trade: false,
+        engaged: thesis.engagement,
+        zero_dte: Vec::new(),
+    }
+}
+
+/// A decision panel that abstains: no opportunity is asserted until the full
+/// gate (EV / calibrated probability / tail risk / trust) is wired. Honest by
+/// construction — never a fabricated ACTIVE.
+fn abstaining_decision() -> DecisionPanel {
+    DecisionPanel {
+        opportunity: Readout { state: BinaryState::Inactive, score: 0.0 },
+        action: "WAIT".to_owned(),
+        expected_value: 0.0,
+        calibrated_p: 0.0,
+        reward_risk: 0.0,
+        tail_risk: 0.0,
+        conditions: Vec::new(),
     }
 }
 

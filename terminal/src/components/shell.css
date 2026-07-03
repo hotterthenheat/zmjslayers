@@ -14,14 +14,14 @@
   min-height: 0;
 }
 
-/* ── Cockpit: thesis | ladder | positioning | regime/vol stack ───────────── */
+/* ── Cockpit: decision/read | ladder | positioning | regime/vol ──────────── */
 .ws-cockpit {
-  grid-template-columns: 260px 1.6fr 280px 320px;
-  grid-template-rows: 1fr 1fr auto;
+  grid-template-columns: 300px 1.5fr 280px 300px;
+  grid-template-rows: 1.35fr 1fr auto;
   grid-template-areas:
-    'thesis ladder dealer regime'
-    'thesis ladder dealer vol'
-    'engines engines engines flow';
+    'decision ladder dealer regime'
+    'read ladder dealer vol'
+    'engines engines engines engines';
 }
 
 /* ── Pinpoint GEX: metric strip over matrix | ladder | positioning/flow ──── */

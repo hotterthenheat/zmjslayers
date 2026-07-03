@@ -1,0 +1,139 @@
+.decision {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+}
+
+.decision-verdict {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+.decision.is-active .decision-verdict {
+  border-color: rgba(41, 182, 246, 0.45);
+  background: var(--state-active-bg);
+  box-shadow: 0 0 20px var(--state-active-glow);
+}
+.decision.is-inactive .decision-verdict {
+  background: var(--state-inactive-bg);
+}
+
+.decision-state {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+.decision.is-active .decision-state {
+  color: var(--state-active);
+}
+.decision.is-inactive .decision-state {
+  color: var(--state-inactive);
+}
+
+.decision-action {
+  font-size: var(--fs-label);
+  letter-spacing: 0.14em;
+  color: var(--text-dim);
+}
+
+.decision-quality {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 0;
+}
+.decision-quality-num {
+  font-size: 44px;
+  font-weight: 720;
+  line-height: 1;
+  color: var(--num);
+}
+.decision.is-active .decision-quality-num {
+  color: var(--state-active);
+  text-shadow: 0 0 24px var(--state-active-glow);
+}
+.decision-quality-label {
+  font-size: 8px;
+  letter-spacing: 0.18em;
+  color: var(--text-faint);
+}
+
+.decision-inputs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+.decision-input {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 2px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+.decision-input-label {
+  font-size: 8px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.decision-input-value {
+  font-size: var(--fs-num);
+  font-weight: 640;
+  color: var(--num);
+}
+
+.decision-gate {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 2px;
+  overflow-y: auto;
+}
+.gate-row {
+  display: grid;
+  grid-template-columns: 14px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  height: 20px;
+  padding: 0 4px;
+  font-size: var(--fs-ui);
+}
+.gate-mark {
+  font-weight: 800;
+  text-align: center;
+}
+.gate-row.pass .gate-mark {
+  color: var(--success);
+}
+.gate-row.fail .gate-mark {
+  color: var(--danger);
+}
+.gate-label {
+  color: var(--text-dim);
+}
+.gate-row.fail .gate-label {
+  color: var(--text-2);
+}
+.gate-value {
+  color: var(--text-faint);
+  font-size: var(--fs-label);
+}
+
+.decision-abstain {
+  margin-top: auto;
+  padding: 8px;
+  text-align: center;
+  font-size: var(--fs-label);
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+  border: 1px dashed var(--border);
+  border-radius: 4px;
+}

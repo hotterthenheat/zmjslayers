@@ -4,6 +4,8 @@ members = [
     "crates/slayer-core",
     "crates/slayer-quant",
     "crates/slayer-engines",
+    "crates/slayer-signal",
+    "crates/slayer-strategy",
     "crates/slayer-feed",
     "crates/slayer-gateway",
 ]
@@ -20,6 +22,8 @@ repository = "https://github.com/hotterthenheat/zmjslayers"
 slayer-core = { path = "crates/slayer-core" }
 slayer-quant = { path = "crates/slayer-quant" }
 slayer-engines = { path = "crates/slayer-engines" }
+slayer-signal = { path = "crates/slayer-signal" }
+slayer-strategy = { path = "crates/slayer-strategy" }
 slayer-feed = { path = "crates/slayer-feed" }
 
 serde = { version = "1", features = ["derive"] }

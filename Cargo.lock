@@ -1121,6 +1121,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "slayer-signal"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "slayer-core",
+ "slayer-quant",
+ "thiserror",
+]
+
+[[package]]
+name = "slayer-strategy"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "slayer-core",
+ "slayer-quant",
+ "thiserror",
+]
+
+[[package]]
 name = "smallvec"
 version = "1.15.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"

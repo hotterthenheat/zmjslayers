@@ -10,6 +10,8 @@ import { DealerLadder } from './DealerLadder'
 import { DealerStats } from './DealerStats'
 import { StrikeMatrix } from './StrikeMatrix'
 import { DealerPulse } from './DealerPulse'
+import { DecisionCard } from './DecisionCard'
+import { TerminalRead } from './TerminalRead'
 import { ThesisReadout } from './ThesisReadout'
 import { RegimeReadout } from './RegimeReadout'
 import { VolReadout } from './VolReadout'
@@ -49,12 +51,12 @@ export function TerminalShell() {
 function CockpitWorkspace({ snap }: { snap: TerminalSnapshot }) {
   return (
     <div className="ws ws-cockpit">
-      <ThesisReadout thesis={snap.thesis} />
+      <DecisionCard decision={snap.decision} />
+      <TerminalRead read={snap.read} />
       <DealerLadder dealer={snap.dealer} spot={snap.spot} />
       <PositioningPanel snap={snap} />
       <RegimeReadout regime={snap.regime} />
       <VolReadout vol={snap.vol} />
-      <FlowReadout flow={snap.flow} />
       <EngineBoard engines={snap.engines} />
     </div>
   )

@@ -9,7 +9,7 @@
 
 import type { BinaryState, Readout } from './state'
 
-export const WIRE_VERSION = 1
+export const WIRE_VERSION = 2
 
 export interface Metric {
   label: string
@@ -87,6 +87,33 @@ export interface FlowPanel {
   oi_flow: Readout
 }
 
+export interface GateCondition {
+  label: string
+  pass: boolean
+  value: number
+}
+
+export interface DecisionPanel {
+  opportunity: Readout
+  action: string
+  expected_value: number
+  calibrated_p: number
+  reward_risk: number
+  tail_risk: number
+  conditions: GateCondition[]
+}
+
+export interface TerminalReadPanel {
+  score: number
+  bias: string
+  regime: string
+  outlook: string
+  confidence: number
+  no_trade: boolean
+  engaged: Readout
+  zero_dte: Metric[]
+}
+
 export interface EngineStatus {
   engine: string
   state: BinaryState
@@ -112,6 +139,8 @@ export interface TerminalSnapshot {
   regime: RegimePanel
   vol: VolPanel
   flow: FlowPanel
+  decision: DecisionPanel
+  read: TerminalReadPanel
   engines: EngineStatus[]
 }
 
